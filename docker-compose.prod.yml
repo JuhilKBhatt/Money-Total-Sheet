@@ -1,0 +1,39 @@
+# ./docker-compose.prod.yml
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: MTS_postgres_db_prod
+    restart: unless-stopped
+    environment:
+      - .env
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: MTS_backend_prod
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - .env
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: MTS_frontend_prod
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data_prod:

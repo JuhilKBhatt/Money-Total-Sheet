@@ -1,0 +1,46 @@
+# ./docker-compose.dev.yml
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: MTS_postgres_db_dev
+    restart: unless-stopped
+    environment:
+      - .env
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: MTS_backend_dev
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - .env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: MTS_frontend_dev
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - .env
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data_dev:
