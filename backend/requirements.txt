@@ -1,12 +1,7 @@
-flask
-Flask-Cors
 python-dotenv
 psycopg2-binary
 fastapi
 alembic
 uvicorn
-requests
 sqlalchemy
 pydantic
-jinja2
-httpx
