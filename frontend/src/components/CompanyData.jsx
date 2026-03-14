@@ -1,11 +1,14 @@
 /* ./frontend/src/components/CompanyData.jsx */
 import React, { useState, useEffect } from 'react';
-import { Button, Modal, message, Typography, Spin, Table, Form, DatePicker, InputNumber, Space, Input, Select, Popconfirm } from 'antd';
-import { PlusOutlined, MinusCircleOutlined, FallOutlined } from '@ant-design/icons';
+import { Button, message, Spin, Form, Space } from 'antd';
+import { PlusOutlined, FallOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
 
-const { Text, Title } = Typography;
+import LedgerTable from './LedgerTable';
+import PickupModal from './PickupModal';
+import DeductionModal from './DeductionModal';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function CompanyData({ companyId }) {
@@ -17,16 +20,10 @@ export default function CompanyData({ companyId }) {
   // Modals & Editing State
   const [isPickupModalVisible, setIsPickupModalVisible] = useState(false);
   const [isDeductionModalVisible, setIsDeductionModalVisible] = useState(false);
-  const [editingId, setEditingId] = useState(null); // Tracks if we are editing an existing item
+  const [editingId, setEditingId] = useState(null);
 
   const [pickupForm] = Form.useForm();
   const [deductionForm] = Form.useForm();
-
-  // Live Calculator for Pickup Modal
-  const currentMetals = Form.useWatch('metals', pickupForm) || [];
-  const liveTripTotal = currentMetals.reduce((sum, metal) => {
-    return sum + ((metal?.net_weight || 0) * (metal?.price_per_unit || 0));
-  }, 0);
 
   useEffect(() => {
     fetchCompanyData();
@@ -74,7 +71,7 @@ export default function CompanyData({ companyId }) {
       date: dayjs(pickup.date),
       yard: pickup.yard,
       notes: pickup.notes,
-      metals: pickup.metals // Automatically populates the dynamic metal fields
+      metals: pickup.metals
     });
     setIsPickupModalVisible(true);
   };
@@ -110,7 +107,6 @@ export default function CompanyData({ companyId }) {
       };
       
       if (editingId) {
-        // To easily replace nested metals, we safely delete the old trip and POST the new one
         await axios.delete(`${API_URL}/pickups/${editingId}`);
         await axios.post(`${API_URL}/pickups/`, payload);
         message.success("Pickup updated successfully!");
@@ -154,6 +150,9 @@ export default function CompanyData({ companyId }) {
     }
   };
 
+  // ==========================================
+  // DELETE HANDLERS
+  // ==========================================
   const handleDeletePickup = async (id) => {
     try {
       await axios.delete(`${API_URL}/pickups/${id}`);
@@ -261,97 +260,6 @@ export default function CompanyData({ companyId }) {
 
   const tableData = buildLedgerData();
 
-  // ==========================================
-  // TABLE COLUMNS
-  // ==========================================
-  const columns = [
-    {
-      title: 'Date', 
-      dataIndex: 'date', 
-      key: 'date',
-      width: 90,
-      onCell: (record) => ({ colSpan: record.type === 'balance' ? 5 : 1 }),
-      render: (val, record) => record.type === 'balance' ? <div style={{ textAlign: 'right', fontWeight: 'bold' }}>{record.priceLabel}</div> : val
-    },
-    {
-      title: 'Yard & Notes', 
-      dataIndex: 'yardNotes', 
-      key: 'yardNotes',
-      width: 200,
-      onCell: (record) => {
-        if (record.type === 'balance') return { colSpan: 0 };
-        if (record.type === 'deduction') return { colSpan: 4 }; // Stretches across Metal, Kg, and $
-        return { colSpan: 1 };
-      }
-    },
-    {
-      title: 'Metal', 
-      dataIndex: 'metal', 
-      key: 'metal',
-      width: 120,
-      onCell: (record) => ({ colSpan: (record.type === 'balance' || record.type === 'deduction') ? 0 : 1 })
-    },
-    {
-      title: 'Kg', 
-      dataIndex: 'kg', 
-      key: 'kg',
-      width: 80,
-      onCell: (record) => ({ colSpan: (record.type === 'balance' || record.type === 'deduction') ? 0 : 1 })
-    },
-    {
-      title: '$', 
-      dataIndex: 'price', 
-      key: 'price',
-      width: 80,
-      onCell: (record) => ({ colSpan: (record.type === 'balance' || record.type === 'deduction') ? 0 : 1 }),
-      render: (val, record) => (val && record.type === 'metal') ? `$${Number(val).toFixed(2)}` : ''
-    },
-    {
-      title: 'Total', 
-      dataIndex: 'total', 
-      key: 'total',
-      width: 100,
-      render: (val, record) => {
-        if (val === undefined || val === '') return '';
-        const num = Number(val);
-        if (record.type === 'balance') return <strong style={{ fontSize: '15px' }}>${num.toFixed(2)}</strong>;
-        return `$${num.toFixed(2)}`;
-      }
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: 140,
-      className: 'table-actions-col',
-      render: (_, record) => {
-        if (record.type === 'balance') return null;
-
-        if (record.type === 'deduction') {
-          return (
-            <Space>
-              <Button type="primary" size="small" onClick={() => openEditDeduction(record.rawDeduction)}>Edit</Button>
-              <Popconfirm title="Delete this deduction?" onConfirm={() => handleDeleteDeduction(record.rawDeduction.id)}>
-                <Button type="primary" danger size="small">Delete</Button>
-              </Popconfirm>
-            </Space>
-          );
-        }
-
-        if (record.type === 'metal' && record.isFirstMetal) {
-          return (
-            <Space>
-              <Button type="primary" size="small" onClick={() => openEditPickup(record.rawPickup)}>Edit</Button>
-              <Popconfirm title="Delete this entire trip?" onConfirm={() => handleDeletePickup(record.rawPickup.id)}>
-                <Button type="primary" danger size="small">Delete</Button>
-              </Popconfirm>
-            </Space>
-          );
-        }
-        return null;
-      }
-    }
-  ];
-
   return (
     <div>
       <Space style={{ marginBottom: 16 }}>
@@ -366,115 +274,32 @@ export default function CompanyData({ companyId }) {
       {loading ? (
         <Spin style={{ display: 'block', margin: '40px auto' }} />
       ) : (
-        <Table 
-          dataSource={tableData} 
-          columns={columns} 
-          pagination={false} 
-          bordered
-          size="small"
-          rowClassName={(record) => {
-            if (record.type === 'deduction') return 'row-deduction';
-            if (record.type === 'balance') return 'row-balance';
-            return '';
-          }}
+        <LedgerTable 
+          tableData={tableData}
+          loading={loading}
+          openEditDeduction={openEditDeduction}
+          handleDeleteDeduction={handleDeleteDeduction}
+          openEditPickup={openEditPickup}
+          handleDeletePickup={handleDeletePickup}
         />
       )}
 
-      {/* ========================================== */}
-      {/* PICKUP MODAL (Add & Edit)                  */}
-      {/* ========================================== */}
-
-      <Modal
-        title={editingId ? "Edit Pickup" : "Add New Pickup"}
-        open={isPickupModalVisible}
+      <PickupModal 
+        visible={isPickupModalVisible}
         onCancel={() => { setIsPickupModalVisible(false); pickupForm.resetFields(); setEditingId(null); }}
-        footer={null}
-        width={750}
-      >
-        <Form form={pickupForm} layout="vertical" onFinish={handlePickupSubmit}>
-          <Space size="large" style={{ display: 'flex' }}>
-            <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-              <DatePicker style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item name="yard" label="Yard" rules={[{ required: true }]}>
-              <Select placeholder="Select a Yard" style={{ width: 200 }}>
-                {yards.map(yard => (
-                  <Select.Option key={yard.id} value={yard.name}>{yard.name}</Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Space>
-          <Form.Item name="notes" label="Notes">
-            <Input.TextArea rows={2} placeholder="Optional notes about this trip..." />
-          </Form.Item>
+        onSubmit={handlePickupSubmit}
+        form={pickupForm}
+        yards={yards}
+        editingId={editingId}
+      />
 
-          <Text strong>Metal Items:</Text>
-          <div style={{ background: '#f9f9f9', padding: '15px', borderRadius: '8px', marginTop: '10px' }}>
-            <Form.List name="metals">
-              {(fields, { add, remove }) => (
-                <>
-                  {fields.map(({ key, name, ...restField }) => (
-                    <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                      <Form.Item {...restField} name={[name, 'metal_name']} rules={[{ required: true, message: 'Required' }]}>
-                        <Input placeholder="Metal Type (e.g. Copper)" />
-                      </Form.Item>
-                      <Form.Item {...restField} name={[name, 'net_weight']} rules={[{ required: true, message: 'Required' }]}>
-                        <InputNumber placeholder="Weight (kg)" min={0} step={1} />
-                      </Form.Item>
-                      <Form.Item {...restField} name={[name, 'price_per_unit']} rules={[{ required: true, message: 'Required' }]}>
-                        <InputNumber placeholder="Price / kg" min={0} step={0.01} />
-                      </Form.Item>
-                      <MinusCircleOutlined onClick={() => remove(name)} style={{ color: 'red' }} />
-                    </Space>
-                  ))}
-                  <Form.Item style={{ margin: 0 }}>
-                    <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                      Add Metal Item
-                    </Button>
-                  </Form.Item>
-                </>
-              )}
-            </Form.List>
-
-            <div style={{ textAlign: 'right', marginTop: 15 }}>
-              <Title level={5} style={{ margin: 0 }}>Live Total: ${liveTripTotal.toFixed(2)}</Title>
-            </div>
-          </div>
-
-          <Form.Item style={{ marginTop: 24, textAlign: 'right' }}>
-            <Button onClick={() => { setIsPickupModalVisible(false); setEditingId(null); }} style={{ marginRight: 8 }}>Cancel</Button>
-            <Button type="primary" htmlType="submit">{editingId ? "Save Changes" : "Submit Pickup"}</Button>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* ========================================== */}
-      {/* DEDUCTION MODAL (Add & Edit)               */}
-      {/* ========================================== */}
-
-      <Modal
-        title={editingId ? "Edit Deduction" : "Minus Deductions"}
-        open={isDeductionModalVisible}
+      <DeductionModal 
+        visible={isDeductionModalVisible}
         onCancel={() => { setIsDeductionModalVisible(false); deductionForm.resetFields(); setEditingId(null); }}
-        footer={null}
-      >
-        <Form form={deductionForm} layout="vertical" onFinish={handleDeductionSubmit}>
-          <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="amount" label="Amount to Deduct ($)" rules={[{ required: true }]}>
-            <InputNumber min={0.01} step={0.01} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="notes" label="Reason / Notes">
-            <Input.TextArea rows={3} placeholder="e.g. Advance payment, Collected by..." />
-          </Form.Item>
-          <Form.Item style={{ textAlign: 'right' }}>
-            <Button onClick={() => { setIsDeductionModalVisible(false); setEditingId(null); }} style={{ marginRight: 8 }}>Cancel</Button>
-            <Button danger type="primary" htmlType="submit">{editingId ? "Save Changes" : "Deduct Funds"}</Button>
-          </Form.Item>
-        </Form>
-      </Modal>
-
+        onSubmit={handleDeductionSubmit}
+        form={deductionForm}
+        editingId={editingId}
+      />
     </div>
   );
 }
