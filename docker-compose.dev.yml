@@ -4,7 +4,7 @@ services:
     image: postgres:15-alpine
     container_name: MTS_postgres_db_dev
     restart: unless-stopped
-    environment:
+    env_file:
       - .env
     ports:
       - "5434:5432"
@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
     ports:
       - "8001:8000"
-    environment:
+    env_file:
       - .env
     volumes:
       - ./backend:/app
@@ -34,7 +34,7 @@ services:
     restart: unless-stopped
     ports:
       - "5173:5173"
-    environment:
+    env_file:
       - .env
     volumes:
       - ./frontend:/app
