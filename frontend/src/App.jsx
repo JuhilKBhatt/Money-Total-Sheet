@@ -37,9 +37,9 @@ function AppContent() {
   const activeMenu = location.pathname === '/settings' ? 'settings' : 'dashboard';
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header style={{ display: 'flex', alignItems: 'center', padding: '0 20px' }}>
-        <Title level={4} style={{ color: 'white', margin: '0 20px 0 0' }}>Money Total Sheet</Title>
+    <Layout className="app-layout">
+      <Header className="app-header">
+        <Title level={4} className="app-title">Money Total Sheet</Title>
         <Menu 
           theme="dark" 
           mode="horizontal" 
@@ -52,8 +52,8 @@ function AppContent() {
         />
       </Header>
       
-      <Content style={{ padding: '24px 50px', background: '#f5f5f5' }}>
-        <div style={{ background: '#fff', padding: 24, minHeight: 400, borderRadius: 8 }}>
+      <Content className="app-content">
+        <div className="app-inner-box">
           <Routes>
             <Route path="/" element={<Dashboard companies={companies} loading={loading} />} />
             <Route path="/settings" element={<Settings companies={companies} fetchCompanies={fetchCompanies} />} />
