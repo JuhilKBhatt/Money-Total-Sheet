@@ -2,8 +2,6 @@
 import React from 'react';
 import { Table, Typography, Space, Button, Popconfirm } from 'antd';
 
-const { Text } = Typography;
-
 export default function LedgerTable({ 
   tableData, 
   loading, 
@@ -18,19 +16,24 @@ export default function LedgerTable({
       title: 'Date', 
       dataIndex: 'date', 
       key: 'date',
-      width: 90,
-      onCell: (record) => ({ colSpan: record.type === 'balance' ? 5 : 1 }),
+      width: 100,
+      align: 'center', // Centers vertically and horizontally within merged cell
+      onCell: (record) => {
+        if (record.type === 'balance') return { colSpan: 5 };
+        return { rowSpan: record.rowSpan !== undefined ? record.rowSpan : 1 };
+      },
       render: (val, record) => record.type === 'balance' ? <div style={{ textAlign: 'right', fontWeight: 'bold' }}>{record.priceLabel}</div> : val
     },
     {
       title: 'Yard & Notes', 
       dataIndex: 'yardNotes', 
       key: 'yardNotes',
-      width: 200,
+      width: 250,
+      align: 'center', // Centers vertically and horizontally within merged cell
       onCell: (record) => {
         if (record.type === 'balance') return { colSpan: 0 };
         if (record.type === 'deduction') return { colSpan: 4 }; // Stretches across Metal, Kg, and $
-        return { colSpan: 1 };
+        return { rowSpan: record.rowSpan !== undefined ? record.rowSpan : 1 };
       }
     },
     {
@@ -59,7 +62,7 @@ export default function LedgerTable({
       title: 'Total', 
       dataIndex: 'total', 
       key: 'total',
-      width: 100,
+      width: 120,
       render: (val, record) => {
         if (val === undefined || val === '') return '';
         const num = Number(val);
@@ -71,7 +74,12 @@ export default function LedgerTable({
       title: 'Actions',
       key: 'actions',
       width: 140,
+      align: 'center', // Centers vertically and horizontally within merged cell
       className: 'table-actions-col',
+      onCell: (record) => {
+        if (record.type === 'balance') return { colSpan: 0 };
+        return { rowSpan: record.rowSpan !== undefined ? record.rowSpan : 1 };
+      },
       render: (_, record) => {
         if (record.type === 'balance') return null;
 
@@ -86,12 +94,13 @@ export default function LedgerTable({
           );
         }
 
-        if (record.type === 'metal' && record.isFirstMetal) {
+        // Only render the buttons on the first row of the merge group
+        if (record.type === 'metal' && record.rowSpan > 0) { 
           return (
-            <Space>
-              <Button type="primary" size="small" onClick={() => openEditPickup(record.rawPickup)}>Edit</Button>
+            <Space direction="vertical" size="small">
+              <Button type="primary" size="small" block onClick={() => openEditPickup(record.rawPickup)}>Edit Trip</Button>
               <Popconfirm title="Delete this entire trip?" onConfirm={() => handleDeletePickup(record.rawPickup.id)}>
-                <Button type="primary" danger size="small">Delete</Button>
+                <Button type="primary" danger size="small" block>Delete Trip</Button>
               </Popconfirm>
             </Space>
           );

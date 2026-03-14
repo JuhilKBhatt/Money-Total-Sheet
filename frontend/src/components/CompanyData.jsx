@@ -150,9 +150,6 @@ export default function CompanyData({ companyId }) {
     }
   };
 
-  // ==========================================
-  // DELETE HANDLERS
-  // ==========================================
   const handleDeletePickup = async (id) => {
     try {
       await axios.delete(`${API_URL}/pickups/${id}`);
@@ -198,6 +195,8 @@ export default function CompanyData({ companyId }) {
       const nextEvent = events[index + 1];
 
       if (event.eventType === 'pickup') {
+        const metalCount = event.metals && event.metals.length > 0 ? event.metals.length : 1;
+
         if (event.metals && event.metals.length > 0) {
           event.metals.forEach((metal, mIndex) => {
             const metalTotal = metal.net_weight * metal.price_per_unit;
@@ -207,13 +206,13 @@ export default function CompanyData({ companyId }) {
               key: `metal-${metal.id}`,
               type: 'metal',
               rawPickup: event,
-              date: mIndex === 0 ? dayjs(event.date).format('DD/MM/YY') : '',
-              yardNotes: mIndex === 0 ? [event.yard, event.notes].filter(Boolean).join(' - ') : '',
+              date: dayjs(event.date).format('DD/MM/YY'), // Always populate, rowSpan handles the visual merge
+              yardNotes: [event.yard, event.notes].filter(Boolean).join(' - '),
               metal: metal.metal_name,
               kg: metal.net_weight,
               price: metal.price_per_unit,
               total: metalTotal,
-              isFirstMetal: mIndex === 0
+              rowSpan: mIndex === 0 ? metalCount : 0 // Instructs Ant Design to merge this cell vertically
             });
           });
         }
@@ -240,7 +239,8 @@ export default function CompanyData({ companyId }) {
           date: dayjs(event.date).format('DD/MM/YY'), 
           yardNotes: event.notes || 'Deduction', 
           metal: '', kg: '', price: '',
-          total: event.amount, 
+          total: event.amount,
+          rowSpan: 1
         });
 
         const isTypeChange = !nextEvent || nextEvent.eventType === 'pickup';
