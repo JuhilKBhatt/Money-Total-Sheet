@@ -46,3 +46,17 @@ def create_deduction(deduction: schemas.DeductionCreate, db: Session = Depends(g
 def read_deductions_for_company(company_id: int, db: Session = Depends(get_db)):
     """Get all deductions for a specific company"""
     return crud.get_deductions_by_company(db=db, company_id=company_id)
+
+@app.put("/companies/{company_id}", response_model=schemas.Company)
+def update_company(company_id: int, company: schemas.CompanyUpdate, db: Session = Depends(get_db)):
+    db_company = crud.update_company(db, company_id=company_id, company=company)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return db_company
+
+@app.delete("/companies/{company_id}")
+def delete_company(company_id: int, db: Session = Depends(get_db)):
+    db_company = crud.delete_company(db, company_id=company_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return {"detail": "Company deleted successfully"}
