@@ -102,3 +102,6 @@ class Yard(YardBase):
 
     class Config:
         from_attributes = True
+
+class YardUpdate(BaseModel):
+    name: Optional[str] = None

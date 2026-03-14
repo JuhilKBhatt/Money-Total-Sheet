@@ -204,3 +204,24 @@ def delete_yard(db: Session, yard_id: int):
         db.delete(db_yard)
         db.commit()
     return db_yard
+
+def update_yard(db: Session, yard_id: int, yard: schemas.YardUpdate):
+    db_yard = db.query(models.Yard).filter(models.Yard.id == yard_id).first()
+    
+    if db_yard:
+        if yard.name is not None and yard.name != db_yard.name:
+            old_yard_name = db_yard.name
+            new_yard_name = yard.name
+            
+            # 1. Update the name in the Yards table
+            db_yard.name = new_yard_name
+            
+            # 2. Automatically find and update ALL pickups that used the old yard name
+            db.query(models.Pickup)\
+              .filter(models.Pickup.yard == old_yard_name)\
+              .update({"yard": new_yard_name})
+              
+        db.commit()
+        db.refresh(db_yard)
+        
+    return db_yard

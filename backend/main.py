@@ -76,3 +76,10 @@ def delete_yard(yard_id: int, db: Session = Depends(get_db)):
     if db_yard is None:
         raise HTTPException(status_code=404, detail="Yard not found")
     return {"detail": "Yard deleted successfully"}
+
+@app.put("/yards/{yard_id}", response_model=schemas.Yard)
+def update_yard(yard_id: int, yard: schemas.YardUpdate, db: Session = Depends(get_db)):
+    db_yard = crud.update_yard(db, yard_id=yard_id, yard=yard)
+    if db_yard is None:
+        raise HTTPException(status_code=404, detail="Yard not found")
+    return db_yard
