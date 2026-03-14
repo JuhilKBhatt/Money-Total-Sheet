@@ -30,6 +30,21 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+/* Ledger Table Styling */
+.row-deduction td {
+  background-color: #c4d79b !important; /* Excel Green */
+}
+
+.row-balance td {
+  background-color: #e6e6e6 !important; /* Excel Grey */
+  border-top: 2px solid #a0a0a0 !important;
+  border-bottom: 2px solid #a0a0a0 !important;
+}
+
+.table-actions-col {
+  background-color: #fff !important; /* Keep actions column white so it doesn't clash */
+}
+
 /* --- Mobile / Phone Screen Support --- */
 @media screen and (max-width: 768px) {
   /* Stack the header and menu vertically */
