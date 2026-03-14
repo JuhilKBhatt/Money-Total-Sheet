@@ -48,3 +48,9 @@ class Deduction(Base):
     notes = Column(Text, nullable=True)
 
     company = relationship("Company", back_populates="deductions")
+
+class Yard(Base):
+    __tablename__ = "yards"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)

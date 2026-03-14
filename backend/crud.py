@@ -187,3 +187,20 @@ def delete_deduction(db: Session, deduction_id: int):
         db.commit()
     return db_deduction
 
+# --- Yard Operations ---
+def get_yards(db: Session):
+    return db.query(models.Yard).all()
+
+def create_yard(db: Session, yard: schemas.YardCreate):
+    db_yard = models.Yard(name=yard.name)
+    db.add(db_yard)
+    db.commit()
+    db.refresh(db_yard)
+    return db_yard
+
+def delete_yard(db: Session, yard_id: int):
+    db_yard = db.query(models.Yard).filter(models.Yard.id == yard_id).first()
+    if db_yard:
+        db.delete(db_yard)
+        db.commit()
+    return db_yard

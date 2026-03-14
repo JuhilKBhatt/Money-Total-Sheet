@@ -60,3 +60,19 @@ def delete_company(company_id: int, db: Session = Depends(get_db)):
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
     return {"detail": "Company deleted successfully"}
+
+# --- Yard Routes ---
+@app.post("/yards/", response_model=schemas.Yard)
+def create_yard(yard: schemas.YardCreate, db: Session = Depends(get_db)):
+    return crud.create_yard(db=db, yard=yard)
+
+@app.get("/yards/", response_model=List[schemas.Yard])
+def read_yards(db: Session = Depends(get_db)):
+    return crud.get_yards(db)
+
+@app.delete("/yards/{yard_id}")
+def delete_yard(yard_id: int, db: Session = Depends(get_db)):
+    db_yard = crud.delete_yard(db, yard_id=yard_id)
+    if db_yard is None:
+        raise HTTPException(status_code=404, detail="Yard not found")
+    return {"detail": "Yard deleted successfully"}

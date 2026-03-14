@@ -1,6 +1,6 @@
 /* ./frontend/src/components/CompanyData.jsx */
 import React, { useState, useEffect } from 'react';
-import { Button, Modal, message, Typography, Spin, Table, Form, DatePicker, InputNumber, Space, Input } from 'antd';
+import { Button, Modal, message, Typography, Spin, Table, Form, DatePicker, InputNumber, Space, Input, Select } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, FallOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
@@ -11,6 +11,7 @@ export default function CompanyData({ companyId }) {
   const [pickups, setPickups] = useState([]);
   const [deductions, setDeductions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [yards, setYards] = useState([]);
 
   const [isPickupModalVisible, setIsPickupModalVisible] = useState(false);
   const [isDeductionModalVisible, setIsDeductionModalVisible] = useState(false);
@@ -18,9 +19,23 @@ export default function CompanyData({ companyId }) {
   const [pickupForm] = Form.useForm();
   const [deductionForm] = Form.useForm();
 
-  useEffect(() => {
+    useEffect(() => {
     fetchCompanyData();
   }, [companyId]);
+
+    useEffect(() => {
+    fetchCompanyData();
+    fetchYards(); // New function call
+  }, [companyId]);
+
+  const fetchYards = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/yards/`);
+      setYards(response.data);
+    } catch (error) {
+      console.error("Failed to load yards", error);
+    }
+  };
 
   const fetchCompanyData = async () => {
     try {
@@ -203,11 +218,14 @@ export default function CompanyData({ companyId }) {
             <Form.Item name="date" label="Date" rules={[{ required: true }]}>
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item name="yard" label="Yard" rules={[{ required: true }]}>
-              <Input placeholder="e.g. Scrappy's Yard" />
-            </Form.Item>
-            <Form.Item name="deduction" label="Trip Deduction ($)" initialValue={0}>
-              <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+            <Form.Item name="yard" label="Yard" rules={[{ required: true, message: 'Please select a yard' }]}>
+              <Select placeholder="Select a Yard">
+                {yards.map(yard => (
+                  <Select.Option key={yard.id} value={yard.name}>
+                    {yard.name}
+                  </Select.Option>
+                ))}
+              </Select>
             </Form.Item>
           </Space>
           

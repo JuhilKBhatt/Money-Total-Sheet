@@ -89,3 +89,16 @@ class DeductionUpdate(BaseModel):
     amount: Optional[float] = None
     date: Optional[date] = None
     notes: Optional[str] = None
+
+# --- Yard Schemas ---
+class YardBase(BaseModel):
+    name: str
+
+class YardCreate(YardBase):
+    pass
+
+class Yard(YardBase):
+    id: int
+
+    class Config:
+        from_attributes = True

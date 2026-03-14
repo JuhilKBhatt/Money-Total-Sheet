@@ -1,24 +1,40 @@
 /* ./frontend/src/pages/Settings.jsx */
-import React, { useState } from 'react';
-import { Input, Button, Modal, message, Card, List, Popconfirm } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Input, Button, Modal, message, Card, List, Popconfirm, Divider } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function Settings({ companies, fetchCompanies }) {
+  // Company State
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  
   const [newCompanyName, setNewCompanyName] = useState('');
   const [editingCompany, setEditingCompany] = useState(null);
   const [editCompanyName, setEditCompanyName] = useState('');
 
-  const handleAddCompany = async () => {
-    if (!newCompanyName.trim()) {
-      message.warning("Company name cannot be empty.");
-      return;
+  // Yard State
+  const [yards, setYards] = useState([]);
+  const [isAddYardModalVisible, setIsAddYardModalVisible] = useState(false);
+  const [newYardName, setNewYardName] = useState('');
+
+  useEffect(() => {
+    fetchYards();
+  }, []);
+
+  const fetchYards = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/yards/`);
+      setYards(response.data);
+    } catch (error) {
+      console.error("Failed to load yards", error);
     }
+  };
+
+  // --- Company Handlers ---
+  const handleAddCompany = async () => {
+    if (!newCompanyName.trim()) return message.warning("Name cannot be empty.");
     try {
       await axios.post(`${API_URL}/companies/`, { name: newCompanyName.trim() });
       message.success(`Added company: ${newCompanyName}`);
@@ -26,7 +42,6 @@ export default function Settings({ companies, fetchCompanies }) {
       setIsAddModalVisible(false);
       fetchCompanies();
     } catch (error) {
-      console.error(error);
       message.error("Failed to add company. Name might already exist.");
     }
   };
@@ -48,7 +63,6 @@ export default function Settings({ companies, fetchCompanies }) {
       setIsEditModalVisible(false);
       fetchCompanies();
     } catch (error) {
-      console.error(error);
       message.error("Failed to update company name.");
     }
   };
@@ -59,13 +73,37 @@ export default function Settings({ companies, fetchCompanies }) {
       message.success("Company deleted successfully.");
       fetchCompanies();
     } catch (error) {
-      console.error(error);
       message.error("Failed to delete company.");
+    }
+  };
+
+  // --- Yard Handlers ---
+  const handleAddYard = async () => {
+    if (!newYardName.trim()) return message.warning("Yard name cannot be empty.");
+    try {
+      await axios.post(`${API_URL}/yards/`, { name: newYardName.trim() });
+      message.success(`Added yard: ${newYardName}`);
+      setNewYardName('');
+      setIsAddYardModalVisible(false);
+      fetchYards();
+    } catch (error) {
+      message.error("Failed to add yard. Name might already exist.");
+    }
+  };
+
+  const handleDeleteYard = async (id) => {
+    try {
+      await axios.delete(`${API_URL}/yards/${id}`);
+      message.success("Yard deleted successfully.");
+      fetchYards();
+    } catch (error) {
+      message.error("Failed to delete yard.");
     }
   };
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
+      {/* MANAGE COMPANIES */}
       <Card 
         title="Manage Companies" 
         extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddModalVisible(true)}>Add Company</Button>}
@@ -77,13 +115,7 @@ export default function Settings({ companies, fetchCompanies }) {
             <List.Item
               actions={[
                 <Button type="text" icon={<EditOutlined />} onClick={() => openEditModal(company)}>Edit</Button>,
-                <Popconfirm
-                  title="Delete the company?"
-                  description="Are you sure to delete this company and all its data?"
-                  onConfirm={() => handleDeleteCompany(company.id)}
-                  okText="Yes"
-                  cancelText="No"
-                >
+                <Popconfirm title="Delete company?" onConfirm={() => handleDeleteCompany(company.id)} okText="Yes" cancelText="No">
                   <Button type="text" danger icon={<DeleteOutlined />}>Delete</Button>
                 </Popconfirm>
               ]}
@@ -94,35 +126,41 @@ export default function Settings({ companies, fetchCompanies }) {
         />
       </Card>
 
-      <Modal
-        title="Add New Company"
-        open={isAddModalVisible}
-        onOk={handleAddCompany}
-        onCancel={() => { setIsAddModalVisible(false); setNewCompanyName(''); }}
-        okText="Add"
+      <Divider />
+
+      {/* MANAGE YARDS */}
+      <Card 
+        title="Manage Yards" 
+        extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddYardModalVisible(true)}>Add Yard</Button>}
       >
-        <Input 
-          placeholder="Enter company name" 
-          value={newCompanyName}
-          onChange={(e) => setNewCompanyName(e.target.value)}
-          onPressEnter={handleAddCompany}
-          autoFocus
+        <List
+          itemLayout="horizontal"
+          dataSource={yards}
+          renderItem={(yard) => (
+            <List.Item
+              actions={[
+                <Popconfirm title="Delete yard?" onConfirm={() => handleDeleteYard(yard.id)} okText="Yes" cancelText="No">
+                  <Button type="text" danger icon={<DeleteOutlined />}>Delete</Button>
+                </Popconfirm>
+              ]}
+            >
+              <List.Item.Meta title={yard.name} />
+            </List.Item>
+          )}
         />
+      </Card>
+
+      {/* Modals */}
+      <Modal title="Add New Company" open={isAddModalVisible} onOk={handleAddCompany} onCancel={() => { setIsAddModalVisible(false); setNewCompanyName(''); }} okText="Add">
+        <Input placeholder="Enter company name" value={newCompanyName} onChange={(e) => setNewCompanyName(e.target.value)} onPressEnter={handleAddCompany} autoFocus />
       </Modal>
 
-      <Modal
-        title="Edit Company Name"
-        open={isEditModalVisible}
-        onOk={handleUpdateCompany}
-        onCancel={() => setIsEditModalVisible(false)}
-        okText="Save"
-      >
-        <Input 
-          value={editCompanyName}
-          onChange={(e) => setEditCompanyName(e.target.value)}
-          onPressEnter={handleUpdateCompany}
-          autoFocus
-        />
+      <Modal title="Edit Company Name" open={isEditModalVisible} onOk={handleUpdateCompany} onCancel={() => setIsEditModalVisible(false)} okText="Save">
+        <Input value={editCompanyName} onChange={(e) => setEditCompanyName(e.target.value)} onPressEnter={handleUpdateCompany} autoFocus />
+      </Modal>
+
+      <Modal title="Add New Yard" open={isAddYardModalVisible} onOk={handleAddYard} onCancel={() => { setIsAddYardModalVisible(false); setNewYardName(''); }} okText="Add">
+        <Input placeholder="Enter yard name" value={newYardName} onChange={(e) => setNewYardName(e.target.value)} onPressEnter={handleAddYard} autoFocus />
       </Modal>
     </div>
   );
