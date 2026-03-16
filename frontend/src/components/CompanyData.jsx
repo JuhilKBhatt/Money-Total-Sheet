@@ -259,7 +259,12 @@ export default function CompanyData({ companyId }) {
   };
 
   const tableData = buildLedgerData();
-
+    const totalPickups = pickups.reduce((sum, pickup) => {
+    const metalsTotal = (pickup.metals || []).reduce((mSum, metal) => mSum + (metal.total || 0), 0);
+    return sum + metalsTotal;
+  }, 0);
+  const totalDeductions = deductions.reduce((sum, deduction) => sum + (deduction.amount || 0), 0);
+  const grandTotal = totalPickups - totalDeductions
   return (
     <div>
       <Space style={{ marginBottom: 16 }}>
@@ -277,6 +282,7 @@ export default function CompanyData({ companyId }) {
         <LedgerTable 
           tableData={tableData}
           loading={loading}
+          grandTotal={grandTotal}
           openEditDeduction={openEditDeduction}
           handleDeleteDeduction={handleDeleteDeduction}
           openEditPickup={openEditPickup}

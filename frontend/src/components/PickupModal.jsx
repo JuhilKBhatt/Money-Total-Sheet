@@ -73,7 +73,9 @@ export default function PickupModal({
           </Form.List>
 
           <div style={{ textAlign: 'right', marginTop: 15 }}>
-            <Title level={5} style={{ margin: 0 }}>Live Total: ${liveTripTotal.toFixed(2)}</Title>
+            <Title level={5} style={{ margin: 0 }}>
+                Live Total: ${liveTripTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Title>
           </div>
         </div>
 
