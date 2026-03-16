@@ -1,9 +1,10 @@
-# ./backend/app/services/crud.py
+# ./backend/crud.py
 from sqlalchemy.orm import Session
 import models, schemas
 
+# --- Company Operations ---
 def get_companies(db: Session):
-    return db.query(models.Company).all()
+    return db.query(models.Company).order_by(models.Company.name).all()
 
 def create_company(db: Session, company: schemas.CompanyCreate):
     db_company = models.Company(name=company.name)
@@ -12,6 +13,24 @@ def create_company(db: Session, company: schemas.CompanyCreate):
     db.refresh(db_company)
     return db_company
 
+def update_company(db: Session, company_id: int, company: schemas.CompanyUpdate):
+    db_company = db.query(models.Company).filter(models.Company.id == company_id).first()
+    if db_company:
+        if company.name is not None:
+            db_company.name = company.name
+        db.commit()
+        db.refresh(db_company)
+    return db_company
+
+def delete_company(db: Session, company_id: int):
+    db_company = db.query(models.Company).filter(models.Company.id == company_id).first()
+    if db_company:
+        db.delete(db_company)
+        db.commit()
+    return db_company
+
+
+# --- Pickup Operations ---
 def get_pickups_by_company(db: Session, company_id: int):
     return db.query(models.Pickup).filter(models.Pickup.company_id == company_id).all()
 
@@ -48,48 +67,6 @@ def create_pickup(db: Session, pickup: schemas.PickupCreate):
     db.refresh(db_pickup)
     return db_pickup
 
-def create_deduction(db: Session, deduction: schemas.DeductionCreate):
-    db_deduction = models.Deduction(
-        company_id=deduction.company_id,
-        amount=deduction.amount,
-        date=deduction.date,
-        notes=deduction.notes,
-        currency=deduction.currency
-    )
-    db.add(db_deduction)
-    db.commit()
-    db.refresh(db_deduction)
-    return db_deduction
-
-def get_deductions_by_company(db: Session, company_id: int):
-    return db.query(models.Deduction).filter(models.Deduction.company_id == company_id).all()
-
-def recalculate_pickup_total(db: Session, pickup_id: int):
-    db_pickup = db.query(models.Pickup).filter(models.Pickup.id == pickup_id).first()
-    if not db_pickup:
-        return None
-    gross_total = sum([metal.total for metal in db_pickup.metals])
-    db_pickup.total_amount = gross_total - db_pickup.deduction
-    db.commit()
-    db.refresh(db_pickup)
-    return db_pickup
-
-def update_company(db: Session, company_id: int, company: schemas.CompanyUpdate):
-    db_company = db.query(models.Company).filter(models.Company.id == company_id).first()
-    if db_company:
-        if company.name is not None:
-            db_company.name = company.name
-        db.commit()
-        db.refresh(db_company)
-    return db_company
-
-def delete_company(db: Session, company_id: int):
-    db_company = db.query(models.Company).filter(models.Company.id == company_id).first()
-    if db_company:
-        db.delete(db_company)
-        db.commit()
-    return db_company
-
 def update_pickup(db: Session, pickup_id: int, pickup: schemas.PickupUpdate):
     db_pickup = db.query(models.Pickup).filter(models.Pickup.id == pickup_id).first()
     if db_pickup:
@@ -108,6 +85,18 @@ def delete_pickup(db: Session, pickup_id: int):
         db.commit()
     return db_pickup
 
+def recalculate_pickup_total(db: Session, pickup_id: int):
+    db_pickup = db.query(models.Pickup).filter(models.Pickup.id == pickup_id).first()
+    if not db_pickup:
+        return None
+    gross_total = sum([metal.total for metal in db_pickup.metals])
+    db_pickup.total_amount = gross_total - db_pickup.deduction
+    db.commit()
+    db.refresh(db_pickup)
+    return db_pickup
+
+
+# --- Metal Item Operations ---
 def create_metal_item(db: Session, pickup_id: int, item: schemas.MetalItemCreate):
     metal_total = item.net_weight * item.price_per_unit
     db_metal = models.MetalItem(
@@ -146,6 +135,24 @@ def delete_metal_item(db: Session, item_id: int):
         recalculate_pickup_total(db, pickup_id)
     return db_metal
 
+
+# --- Deduction Operations ---
+def get_deductions_by_company(db: Session, company_id: int):
+    return db.query(models.Deduction).filter(models.Deduction.company_id == company_id).all()
+
+def create_deduction(db: Session, deduction: schemas.DeductionCreate):
+    db_deduction = models.Deduction(
+        company_id=deduction.company_id,
+        amount=deduction.amount,
+        date=deduction.date,
+        notes=deduction.notes,
+        currency=deduction.currency
+    )
+    db.add(db_deduction)
+    db.commit()
+    db.refresh(db_deduction)
+    return db_deduction
+
 def update_deduction(db: Session, deduction_id: int, deduction: schemas.DeductionUpdate):
     db_deduction = db.query(models.Deduction).filter(models.Deduction.id == deduction_id).first()
     if db_deduction:
@@ -164,21 +171,16 @@ def delete_deduction(db: Session, deduction_id: int):
         db.commit()
     return db_deduction
 
+
+# --- Yard Operations ---
 def get_yards(db: Session):
-    return db.query(models.Yard).all()
+    return db.query(models.Yard).order_by(models.Yard.name).all()
 
 def create_yard(db: Session, yard: schemas.YardCreate):
     db_yard = models.Yard(name=yard.name)
     db.add(db_yard)
     db.commit()
     db.refresh(db_yard)
-    return db_yard
-
-def delete_yard(db: Session, yard_id: int):
-    db_yard = db.query(models.Yard).filter(models.Yard.id == yard_id).first()
-    if db_yard:
-        db.delete(db_yard)
-        db.commit()
     return db_yard
 
 def update_yard(db: Session, yard_id: int, yard: schemas.YardUpdate):
@@ -193,9 +195,17 @@ def update_yard(db: Session, yard_id: int, yard: schemas.YardUpdate):
         db.refresh(db_yard)
     return db_yard
 
+def delete_yard(db: Session, yard_id: int):
+    db_yard = db.query(models.Yard).filter(models.Yard.id == yard_id).first()
+    if db_yard:
+        db.delete(db_yard)
+        db.commit()
+    return db_yard
+
+
 # --- Currency and Unit Operations ---
 def get_currencies(db: Session):
-    return db.query(models.CurrencyOption).all()
+    return db.query(models.CurrencyOption).order_by(models.CurrencyOption.code).all()
 
 def create_currency(db: Session, currency: schemas.CurrencyOptionCreate):
     db_curr = models.CurrencyOption(code=currency.code, symbol=currency.symbol, label=currency.label)
@@ -212,7 +222,7 @@ def delete_currency(db: Session, currency_id: int):
     return db_curr
 
 def get_units(db: Session):
-    return db.query(models.UnitOption).all()
+    return db.query(models.UnitOption).order_by(models.UnitOption.label).all()
 
 def create_unit(db: Session, unit: schemas.UnitOptionCreate):
     db_unit = models.UnitOption(value=unit.value, label=unit.label)
