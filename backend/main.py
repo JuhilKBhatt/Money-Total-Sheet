@@ -4,11 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 
-import models, schemas, crud
-from database import engine, get_db
-
-# Create database tables automatically
-models.Base.metadata.create_all(bind=engine)
+import schemas, crud
+from database import get_db
 
 app = FastAPI(title="Money Total Sheet API")
 
@@ -83,3 +80,35 @@ def update_yard(yard_id: int, yard: schemas.YardUpdate, db: Session = Depends(ge
     if db_yard is None:
         raise HTTPException(status_code=404, detail="Yard not found")
     return db_yard
+
+# --- Currency Routes ---
+@app.post("/currencies/", response_model=schemas.CurrencyOption)
+def create_currency(currency: schemas.CurrencyOptionCreate, db: Session = Depends(get_db)):
+    return crud.create_currency(db=db, currency=currency)
+
+@app.get("/currencies/", response_model=List[schemas.CurrencyOption])
+def read_currencies(db: Session = Depends(get_db)):
+    return crud.get_currencies(db)
+
+@app.delete("/currencies/{currency_id}")
+def delete_currency(currency_id: int, db: Session = Depends(get_db)):
+    db_curr = crud.delete_currency(db, currency_id)
+    if db_curr is None:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    return {"detail": "Currency deleted successfully"}
+
+# --- Unit Routes ---
+@app.post("/units/", response_model=schemas.UnitOption)
+def create_unit(unit: schemas.UnitOptionCreate, db: Session = Depends(get_db)):
+    return crud.create_unit(db=db, unit=unit)
+
+@app.get("/units/", response_model=List[schemas.UnitOption])
+def read_units(db: Session = Depends(get_db)):
+    return crud.get_units(db)
+
+@app.delete("/units/{unit_id}")
+def delete_unit(unit_id: int, db: Session = Depends(get_db)):
+    db_unit = crud.delete_unit(db, unit_id)
+    if db_unit is None:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    return {"detail": "Unit deleted successfully"}

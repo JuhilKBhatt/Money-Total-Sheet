@@ -1,31 +1,29 @@
 /* ./frontend/src/components/DeductionModal.jsx */
 import React from 'react';
-import { Modal, Form, DatePicker, InputNumber, Input, Button } from 'antd';
+import { Modal, Form, DatePicker, InputNumber, Input, Button, Space, Select } from 'antd';
 
-export default function DeductionModal({ 
-  visible, 
-  onCancel, 
-  onSubmit, 
-  form, 
-  editingId 
-}) {
+export default function DeductionModal({ visible, onCancel, onSubmit, form, currencies, editingId }) {
   return (
-    <Modal
-      title={editingId ? "Edit Deduction" : "Minus Deductions"}
-      open={visible}
-      onCancel={onCancel}
-      footer={null}
-    >
+    <Modal title={editingId ? "Edit Deduction" : "Minus Deductions"} open={visible} onCancel={onCancel} footer={null}>
       <Form form={form} layout="vertical" onFinish={onSubmit}>
-        <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-          <DatePicker style={{ width: '100%' }} />
-        </Form.Item>
-        <Form.Item name="amount" label="Amount to Deduct ($)" rules={[{ required: true }]}>
-          <InputNumber min={0.01} step={0.01} style={{ width: '100%' }} />
-        </Form.Item>
-        <Form.Item name="notes" label="Reason / Notes">
-          <Input.TextArea rows={3} placeholder="e.g. Advance payment, Collected by..." />
-        </Form.Item>
+        <Space size="large" style={{ display: 'flex' }}>
+          <Form.Item name="date" label="Date" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} /></Form.Item>
+          
+          <Form.Item label="Amount to Deduct" required>
+             <Space.Compact>
+               <Form.Item name="currency" noStyle rules={[{ required: true }]}>
+                  <Select style={{ width: 80 }}>
+                    {currencies.map(c => <Select.Option key={c.id} value={c.symbol}>{c.symbol}</Select.Option>)}
+                  </Select>
+               </Form.Item>
+               <Form.Item name="amount" noStyle rules={[{ required: true }]}>
+                 <InputNumber min={0.01} step={0.01} style={{ width: '100%' }} />
+               </Form.Item>
+             </Space.Compact>
+          </Form.Item>
+        </Space>
+        
+        <Form.Item name="notes" label="Reason / Notes"><Input.TextArea rows={3} placeholder="e.g. Advance payment..." /></Form.Item>
         <Form.Item style={{ textAlign: 'right' }}>
           <Button onClick={onCancel} style={{ marginRight: 8 }}>Cancel</Button>
           <Button danger type="primary" htmlType="submit">{editingId ? "Save Changes" : "Deduct Funds"}</Button>

@@ -7,6 +7,7 @@ from datetime import date
 class MetalItemBase(BaseModel):
     metal_name: str
     net_weight: float
+    weight_unit: Optional[str] = "kg"
     price_per_unit: float
 
 class MetalItemCreate(MetalItemBase):
@@ -26,6 +27,7 @@ class PickupBase(BaseModel):
     yard: str
     notes: Optional[str] = None
     deduction: float = 0.0
+    currency: Optional[str] = "$"
 
 class PickupCreate(PickupBase):
     company_id: int
@@ -45,6 +47,7 @@ class DeductionBase(BaseModel):
     amount: float
     date: date
     notes: Optional[str] = None
+    currency: Optional[str] = "$"
 
 class DeductionCreate(DeductionBase):
     company_id: int
@@ -79,16 +82,19 @@ class PickupUpdate(BaseModel):
     yard: Optional[str] = None
     notes: Optional[str] = None
     deduction: Optional[float] = None
+    currency: Optional[str] = None
 
 class MetalItemUpdate(BaseModel):
     metal_name: Optional[str] = None
     net_weight: Optional[float] = None
     price_per_unit: Optional[float] = None
+    weight_unit: Optional[str] = None
 
 class DeductionUpdate(BaseModel):
     amount: Optional[float] = None
     date: Optional[date] = None
     notes: Optional[str] = None
+    currency: Optional[str] = None
 
 # --- Yard Schemas ---
 class YardBase(BaseModel):
@@ -99,9 +105,34 @@ class YardCreate(YardBase):
 
 class Yard(YardBase):
     id: int
-
     class Config:
         from_attributes = True
 
 class YardUpdate(BaseModel):
     name: Optional[str] = None
+
+# --- Custom Option Schemas ---
+class CurrencyOptionBase(BaseModel):
+    code: str
+    symbol: str
+    label: str
+
+class CurrencyOptionCreate(CurrencyOptionBase):
+    pass
+
+class CurrencyOption(CurrencyOptionBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+class UnitOptionBase(BaseModel):
+    value: str
+    label: str
+
+class UnitOptionCreate(UnitOptionBase):
+    pass
+
+class UnitOption(UnitOptionBase):
+    id: int
+    class Config:
+        from_attributes = True
