@@ -1,7 +1,7 @@
 /* ./frontend/src/components/CompanyData.jsx */
 import React, { useState, useEffect } from 'react';
 import { Button, message, Spin, Form, Space } from 'antd';
-import { PlusOutlined, FallOutlined } from '@ant-design/icons';
+import { PlusOutlined, DollarOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
 
@@ -221,12 +221,8 @@ export default function CompanyData({ companyId, companyName }) {
   const grandTotal = totalPickups - totalDeductions;
 
   return (
-    <div>
-      <Space style={{ marginBottom: 16 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openAddPickup}>Add Pickup</Button>
-        <Button danger icon={<FallOutlined />} onClick={openAddDeduction}>Minus Deductions</Button>
-      </Space>
-
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {/* Table section (Buttons removed from the top) */}
       {loading ? <Spin style={{ display: 'block', margin: '40px auto' }} /> : (
         <LedgerTable 
           tableData={tableData} loading={loading} grandTotal={grandTotal} defaultCurrency={defaultCurrency}
@@ -235,6 +231,31 @@ export default function CompanyData({ companyId, companyName }) {
           companyName={companyName} 
         />
       )}
+
+      {/* Action buttons moved to the bottom right with INCREASED SIZE */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+        <Space>
+          <Button 
+            type="primary" 
+            size="large" 
+            style={{ fontSize: '16px', fontWeight: '600', padding: '0 24px', height: '40px' }} 
+            icon={<PlusOutlined />} 
+            onClick={openAddPickup}
+          >
+            Add Pickup / Drop Off
+          </Button>
+          <Button 
+            danger 
+            type="primary" /* Added type="primary" so the red pops properly */
+            size="large" 
+            style={{ fontSize: '16px', fontWeight: '600', padding: '0 24px', height: '40px' }} 
+            icon={<DollarOutlined />} 
+            onClick={openAddDeduction}
+          >
+            Minus Deductions
+          </Button>
+        </Space>
+      </div>
 
       <PickupModal visible={isPickupModalVisible} onCancel={() => { setIsPickupModalVisible(false); setEditingId(null); }}
         onSubmit={handlePickupSubmit} form={pickupForm} yards={yards} currencies={currencies} units={units} editingId={editingId} defaultUnit={defaultUnit} />

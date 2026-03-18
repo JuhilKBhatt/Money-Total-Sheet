@@ -19,7 +19,7 @@ export default function Dashboard({ companies, loading }) {
   }
 
   const tabItems = companies.map((company) => ({
-    label: company.name,
+    label: <span style={{ fontWeight: 'bold' }}>{company.name}</span>,
     key: String(company.id),
     children: (
       <div style={{ padding: '10px 0' }}>
@@ -30,5 +30,5 @@ export default function Dashboard({ companies, loading }) {
     ),
   }));
 
-  return <Tabs type="card" items={tabItems} />;
+  return <Tabs type="card" size="large" items={tabItems} />;
 }
