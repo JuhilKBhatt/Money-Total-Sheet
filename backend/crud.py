@@ -237,3 +237,37 @@ def delete_unit(db: Session, unit_id: int):
         db.delete(db_unit)
         db.commit()
     return db_unit
+
+def update_currency(db: Session, currency_id: int, currency: schemas.CurrencyOptionCreate):
+    db_curr = db.query(models.CurrencyOption).filter(models.CurrencyOption.id == currency_id).first()
+    if db_curr:
+        old_symbol = db_curr.symbol
+        new_symbol = currency.symbol
+        
+        db_curr.code = currency.code
+        db_curr.symbol = new_symbol
+        db_curr.label = currency.label
+        
+        if old_symbol != new_symbol:
+            db.query(models.Pickup).filter(models.Pickup.currency == old_symbol).update({"currency": new_symbol})
+            db.query(models.Deduction).filter(models.Deduction.currency == old_symbol).update({"currency": new_symbol})
+            
+        db.commit()
+        db.refresh(db_curr)
+    return db_curr
+
+def update_unit(db: Session, unit_id: int, unit: schemas.UnitOptionCreate):
+    db_unit = db.query(models.UnitOption).filter(models.UnitOption.id == unit_id).first()
+    if db_unit:
+        old_value = db_unit.value
+        new_value = unit.value
+        
+        db_unit.value = new_value
+        db_unit.label = unit.label
+        
+        if old_value != new_value:
+            db.query(models.MetalItem).filter(models.MetalItem.weight_unit == old_value).update({"weight_unit": new_value})
+            
+        db.commit()
+        db.refresh(db_unit)
+    return db_unit

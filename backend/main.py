@@ -12,7 +12,7 @@ app = FastAPI(title="Money Total Sheet API")
 # Setup CORS to allow React frontend to talk to FastAPI
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For production, change this to ["http://localhost:8080"]
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -90,6 +90,13 @@ def create_currency(currency: schemas.CurrencyOptionCreate, db: Session = Depend
 def read_currencies(db: Session = Depends(get_db)):
     return crud.get_currencies(db)
 
+@app.put("/currencies/{currency_id}", response_model=schemas.CurrencyOption)
+def update_currency(currency_id: int, currency: schemas.CurrencyOptionCreate, db: Session = Depends(get_db)):
+    db_curr = crud.update_currency(db, currency_id=currency_id, currency=currency)
+    if db_curr is None:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    return db_curr
+
 @app.delete("/currencies/{currency_id}")
 def delete_currency(currency_id: int, db: Session = Depends(get_db)):
     db_curr = crud.delete_currency(db, currency_id)
@@ -105,6 +112,13 @@ def create_unit(unit: schemas.UnitOptionCreate, db: Session = Depends(get_db)):
 @app.get("/units/", response_model=List[schemas.UnitOption])
 def read_units(db: Session = Depends(get_db)):
     return crud.get_units(db)
+
+@app.put("/units/{unit_id}", response_model=schemas.UnitOption)
+def update_unit(unit_id: int, unit: schemas.UnitOptionCreate, db: Session = Depends(get_db)):
+    db_unit = crud.update_unit(db, unit_id=unit_id, unit=unit)
+    if db_unit is None:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    return db_unit
 
 @app.delete("/units/{unit_id}")
 def delete_unit(unit_id: int, db: Session = Depends(get_db)):
