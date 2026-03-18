@@ -1,14 +1,14 @@
-# ./backend/app/schemas.py
+# ./backend/schemas.py
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import date
+from datetime import date as dt_date
 
 # --- Metal Item Schemas ---
 class MetalItemBase(BaseModel):
     metal_name: str
-    net_weight: float
+    net_weight: Optional[float] = 0.0
     weight_unit: Optional[str] = "kg"
-    price_per_unit: float
+    price_per_unit: Optional[float] = 0.0
 
 class MetalItemCreate(MetalItemBase):
     pass
@@ -23,7 +23,7 @@ class MetalItem(MetalItemBase):
 
 # --- Pickup Schemas ---
 class PickupBase(BaseModel):
-    date: date
+    date: dt_date
     yard: str
     notes: Optional[str] = None
     deduction: float = 0.0
@@ -45,7 +45,7 @@ class Pickup(PickupBase):
 # --- Deduction Schemas ---
 class DeductionBase(BaseModel):
     amount: float
-    date: date
+    date: dt_date
     notes: Optional[str] = None
     currency: Optional[str] = "$"
 
@@ -78,11 +78,12 @@ class CompanyUpdate(BaseModel):
     name: Optional[str] = None
 
 class PickupUpdate(BaseModel):
-    date: Optional[date] = None
+    date: Optional[dt_date] = None
     yard: Optional[str] = None
     notes: Optional[str] = None
     deduction: Optional[float] = None
     currency: Optional[str] = None
+    metals: Optional[List[MetalItemCreate]] = None
 
 class MetalItemUpdate(BaseModel):
     metal_name: Optional[str] = None
@@ -92,7 +93,7 @@ class MetalItemUpdate(BaseModel):
 
 class DeductionUpdate(BaseModel):
     amount: Optional[float] = None
-    date: Optional[date] = None
+    date: Optional[dt_date] = None
     notes: Optional[str] = None
     currency: Optional[str] = None
 

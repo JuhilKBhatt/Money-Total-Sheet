@@ -13,7 +13,7 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
     <Modal title={editingId ? "Edit Pickup" : "Add New Pickup"} open={visible} onCancel={onCancel} footer={null} width={800}>
       <Form form={form} layout="vertical" onFinish={onSubmit}>
         <Space size="large" style={{ display: 'flex' }}>
-          <Form.Item name="date" label="Date" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="date" label="Date" rules={[{ required: true }]}><DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} /></Form.Item>
           <Form.Item name="yard" label="Yard" rules={[{ required: true }]}>
             <Select placeholder="Select a Yard" style={{ width: 180 }}>
               {yards.map(yard => <Select.Option key={yard.id} value={yard.name}>{yard.name}</Select.Option>)}
@@ -40,7 +40,7 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
                     </Form.Item>
 
                     <Space.Compact>
-                      <Form.Item {...restField} name={[name, 'net_weight']} rules={[{ required: true }]} noStyle>
+                      <Form.Item {...restField} name={[name, 'net_weight']} noStyle>
                         <InputNumber placeholder="Weight" min={0} step={1} />
                       </Form.Item>
                       <Form.Item {...restField} name={[name, 'weight_unit']} initialValue={defaultUnit} noStyle>
@@ -50,7 +50,7 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
                       </Form.Item>
                     </Space.Compact>
 
-                    <Form.Item {...restField} name={[name, 'price_per_unit']} rules={[{ required: true }]}>
+                    <Form.Item {...restField} name={[name, 'price_per_unit']}>
                       <InputNumber placeholder="Price per unit" min={0} step={0.01} />
                     </Form.Item>
                     <MinusCircleOutlined onClick={() => remove(name)} style={{ color: 'red' }} />

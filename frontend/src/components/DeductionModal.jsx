@@ -7,7 +7,7 @@ export default function DeductionModal({ visible, onCancel, onSubmit, form, curr
     <Modal title={editingId ? "Edit Deduction" : "Minus Deductions"} open={visible} onCancel={onCancel} footer={null}>
       <Form form={form} layout="vertical" onFinish={onSubmit}>
         <Space size="large" style={{ display: 'flex' }}>
-          <Form.Item name="date" label="Date" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="date" label="Date" rules={[{ required: true }]}><DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} /></Form.Item>
           
           <Form.Item label="Amount to Deduct" required>
              <Space.Compact>

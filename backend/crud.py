@@ -50,14 +50,17 @@ def create_pickup(db: Session, pickup: schemas.PickupCreate):
 
     gross_total = 0.0
     for metal_data in pickup.metals:
-        metal_total = metal_data.net_weight * metal_data.price_per_unit
+        nw = metal_data.net_weight or 0.0
+        ppu = metal_data.price_per_unit or 0.0
+        metal_total = nw * ppu
+        
         gross_total += metal_total
         db_metal = models.MetalItem(
             pickup_id=db_pickup.id,
             metal_name=metal_data.metal_name,
-            net_weight=metal_data.net_weight,
+            net_weight=nw,
             weight_unit=metal_data.weight_unit,
-            price_per_unit=metal_data.price_per_unit,
+            price_per_unit=ppu,
             total=metal_total
         )
         db.add(db_metal)
@@ -74,6 +77,22 @@ def update_pickup(db: Session, pickup_id: int, pickup: schemas.PickupUpdate):
         if pickup.yard is not None: db_pickup.yard = pickup.yard
         if pickup.notes is not None: db_pickup.notes = pickup.notes
         if pickup.currency is not None: db_pickup.currency = pickup.currency
+        
+        if pickup.metals is not None:
+            db.query(models.MetalItem).filter(models.MetalItem.pickup_id == pickup_id).delete()
+            for metal_data in pickup.metals:
+                nw = metal_data.net_weight or 0.0
+                ppu = metal_data.price_per_unit or 0.0
+                db_metal = models.MetalItem(
+                    pickup_id=pickup_id,
+                    metal_name=metal_data.metal_name,
+                    net_weight=nw,
+                    weight_unit=metal_data.weight_unit,
+                    price_per_unit=ppu,
+                    total=nw * ppu
+                )
+                db.add(db_metal)
+
         db.commit()
         return recalculate_pickup_total(db, pickup_id)
     return None
@@ -98,13 +117,16 @@ def recalculate_pickup_total(db: Session, pickup_id: int):
 
 # --- Metal Item Operations ---
 def create_metal_item(db: Session, pickup_id: int, item: schemas.MetalItemCreate):
-    metal_total = item.net_weight * item.price_per_unit
+    nw = item.net_weight or 0.0
+    ppu = item.price_per_unit or 0.0
+    metal_total = nw * ppu
+    
     db_metal = models.MetalItem(
         pickup_id=pickup_id,
         metal_name=item.metal_name,
-        net_weight=item.net_weight,
+        net_weight=nw,
         weight_unit=item.weight_unit,
-        price_per_unit=item.price_per_unit,
+        price_per_unit=ppu,
         total=metal_total
     )
     db.add(db_metal)
@@ -120,7 +142,11 @@ def update_metal_item(db: Session, item_id: int, item: schemas.MetalItemUpdate):
         if item.net_weight is not None: db_metal.net_weight = item.net_weight
         if item.price_per_unit is not None: db_metal.price_per_unit = item.price_per_unit
         if item.weight_unit is not None: db_metal.weight_unit = item.weight_unit
-        db_metal.total = db_metal.net_weight * db_metal.price_per_unit
+        
+        nw = db_metal.net_weight or 0.0
+        ppu = db_metal.price_per_unit or 0.0
+        db_metal.total = nw * ppu
+        
         db.commit()
         db.refresh(db_metal)
         recalculate_pickup_total(db, db_metal.pickup_id)

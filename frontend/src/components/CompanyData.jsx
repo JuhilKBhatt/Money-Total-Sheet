@@ -105,46 +105,112 @@ export default function CompanyData({ companyId, companyName }) {
 
   // --- Handlers ---
   const handlePickupSubmit = async (values) => {
-    const payload = {
-      company_id: companyId,
-      date: values.date.format('YYYY-MM-DD'),
-      yard: values.yard,
-      currency: values.currency,
-      notes: values.notes || "",
-      deduction: 0.0,
-      metals: values.metals || []
-    };
-    if (editingId) {
-      await axios.delete(`${API_URL}/pickups/${editingId}`);
-      await axios.post(`${API_URL}/pickups/`, payload);
-    } else {
-      await axios.post(`${API_URL}/pickups/`, payload);
+    try {
+      // Safely map and force cast all fields to avoid 422 errors
+      const cleanMetals = (values.metals || [])
+        .filter(metal => metal && metal.metal_name) // filter out invalid empty rows
+        .map(metal => {
+          let nw = parseFloat(metal.net_weight);
+          if (isNaN(nw)) nw = 0.0;
+          
+          let ppu = parseFloat(metal.price_per_unit);
+          if (isNaN(ppu)) ppu = 0.0;
+
+          return {
+            metal_name: String(metal.metal_name),
+            net_weight: nw,
+            weight_unit: String(metal.weight_unit || defaultUnit),
+            price_per_unit: ppu
+          };
+        });
+
+      // Construct base payload
+      const payload = {
+        date: values.date ? values.date.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
+        yard: String(values.yard || ""),
+        currency: String(values.currency || "$"),
+        notes: String(values.notes || ""),
+        deduction: 0.0,
+        metals: cleanMetals
+      };
+
+      if (editingId) {
+        await axios.put(`${API_URL}/pickups/${editingId}`, payload);
+        message.success("Trip updated successfully.");
+      } else {
+        await axios.post(`${API_URL}/pickups/`, { ...payload, company_id: companyId });
+        message.success("New trip added successfully.");
+      }
+
+      setIsPickupModalVisible(false);
+      setEditingId(null);
+      fetchCompanyData();
+    } catch (error) {
+      console.error("Error saving pickup:", error);
+      // Detailed 422 error parsing to show in UI
+      if (error.response && error.response.status === 422) {
+        const details = error.response.data.detail;
+        message.error(`Validation Error: ${JSON.stringify(details)}`, 5);
+      } else {
+        message.error("Failed to save trip. Please check your data.");
+      }
     }
-    setIsPickupModalVisible(false);
-    setEditingId(null);
-    fetchCompanyData();
   };
 
   const handleDeductionSubmit = async (values) => {
-    const payload = {
-      company_id: companyId,
-      date: values.date.format('YYYY-MM-DD'),
-      amount: values.amount,
-      currency: values.currency,
-      notes: values.notes || ""
-    };
-    if (editingId) {
-      await axios.put(`${API_URL}/deductions/${editingId}`, payload);
-    } else {
-      await axios.post(`${API_URL}/deductions/`, payload);
+    try {
+      let amount = parseFloat(values.amount);
+      if (isNaN(amount)) amount = 0.0;
+
+      const payload = {
+        date: values.date ? values.date.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
+        amount: amount,
+        currency: String(values.currency || "$"),
+        notes: String(values.notes || "")
+      };
+
+      if (editingId) {
+        await axios.put(`${API_URL}/deductions/${editingId}`, payload);
+        message.success("Deduction updated.");
+      } else {
+        await axios.post(`${API_URL}/deductions/`, { ...payload, company_id: companyId });
+        message.success("Deduction added.");
+      }
+
+      setIsDeductionModalVisible(false);
+      setEditingId(null);
+      fetchCompanyData();
+    } catch (error) {
+      console.error("Error saving deduction:", error);
+      if (error.response && error.response.status === 422) {
+        message.error(`Validation Error: ${JSON.stringify(error.response.data.detail)}`, 5);
+      } else {
+        message.error("Failed to save deduction.");
+      }
     }
-    setIsDeductionModalVisible(false);
-    setEditingId(null);
-    fetchCompanyData();
   };
 
-  const handleDeletePickup = async (id) => { await axios.delete(`${API_URL}/pickups/${id}`); fetchCompanyData(); };
-  const handleDeleteDeduction = async (id) => { await axios.delete(`${API_URL}/deductions/${id}`); fetchCompanyData(); };
+  const handleDeletePickup = async (id) => { 
+    try {
+      await axios.delete(`${API_URL}/pickups/${id}`); 
+      message.success("Trip deleted.");
+      fetchCompanyData(); 
+    } catch (error) {
+      console.error("Error deleting pickup:", error);
+      message.error("Failed to delete trip.");
+    }
+  };
+
+  const handleDeleteDeduction = async (id) => { 
+    try {
+      await axios.delete(`${API_URL}/deductions/${id}`); 
+      message.success("Deduction deleted.");
+      fetchCompanyData(); 
+    } catch (error) {
+      console.error("Error deleting deduction:", error);
+      message.error("Failed to delete deduction.");
+    }
+  };
 
   // --- Logic ---
   const buildLedgerData = () => {
@@ -222,7 +288,6 @@ export default function CompanyData({ companyId, companyName }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {/* Table section (Buttons removed from the top) */}
       {loading ? <Spin style={{ display: 'block', margin: '40px auto' }} /> : (
         <LedgerTable 
           tableData={tableData} loading={loading} grandTotal={grandTotal} defaultCurrency={defaultCurrency}
@@ -232,7 +297,6 @@ export default function CompanyData({ companyId, companyName }) {
         />
       )}
 
-      {/* Action buttons moved to the bottom right with INCREASED SIZE */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
         <Space>
           <Button 
@@ -246,7 +310,7 @@ export default function CompanyData({ companyId, companyName }) {
           </Button>
           <Button 
             danger 
-            type="primary" /* Added type="primary" so the red pops properly */
+            type="primary"
             size="large" 
             style={{ fontSize: '16px', fontWeight: '600', padding: '0 24px', height: '40px' }} 
             icon={<DollarOutlined />} 

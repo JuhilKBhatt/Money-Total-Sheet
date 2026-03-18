@@ -126,3 +126,31 @@ def delete_unit(unit_id: int, db: Session = Depends(get_db)):
     if db_unit is None:
         raise HTTPException(status_code=404, detail="Unit not found")
     return {"detail": "Unit deleted successfully"}
+
+@app.put("/pickups/{pickup_id}", response_model=schemas.Pickup)
+def update_pickup(pickup_id: int, pickup: schemas.PickupUpdate, db: Session = Depends(get_db)):
+    db_pickup = crud.update_pickup(db, pickup_id=pickup_id, pickup=pickup)
+    if db_pickup is None:
+        raise HTTPException(status_code=404, detail="Pickup not found")
+    return db_pickup
+
+@app.delete("/pickups/{pickup_id}")
+def delete_pickup(pickup_id: int, db: Session = Depends(get_db)):
+    db_pickup = crud.delete_pickup(db, pickup_id=pickup_id)
+    if db_pickup is None:
+        raise HTTPException(status_code=404, detail="Pickup not found")
+    return {"detail": "Pickup deleted successfully"}
+
+@app.put("/deductions/{deduction_id}", response_model=schemas.Deduction)
+def update_deduction(deduction_id: int, deduction: schemas.DeductionUpdate, db: Session = Depends(get_db)):
+    db_deduction = crud.update_deduction(db, deduction_id=deduction_id, deduction=deduction)
+    if db_deduction is None:
+        raise HTTPException(status_code=404, detail="Deduction not found")
+    return db_deduction
+
+@app.delete("/deductions/{deduction_id}")
+def delete_deduction(deduction_id: int, db: Session = Depends(get_db)):
+    db_deduction = crud.delete_deduction(db, deduction_id=deduction_id)
+    if db_deduction is None:
+        raise HTTPException(status_code=404, detail="Deduction not found")
+    return {"detail": "Deduction deleted successfully"}
