@@ -1,9 +1,11 @@
 /* ./frontend/src/pages/Settings.jsx */
 import React, { useState, useEffect } from 'react';
-import { Input, Button, Modal, message, Card, List, Popconfirm, Divider, Form, Space } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Input, Button, Modal, message, Card, List, Popconfirm, Divider, Form, Space, Collapse, Typography } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SettingOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
+const { Panel } = Collapse;
+const { Text } = Typography;
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function Settings({ companies, fetchCompanies }) {
@@ -41,11 +43,11 @@ export default function Settings({ companies, fetchCompanies }) {
       setCurrencies(currRes.data);
       setUnits(unitsRes.data);
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching settings options:", error);
     }
   };
 
-  // Companies / Yards Functions ...
+  // Companies / Yards Functions
   const handleAddCompany = async () => {
     if (!newCompanyName.trim()) return message.warning("Name cannot be empty.");
     await axios.post(`${API_URL}/companies/`, { name: newCompanyName.trim() });
@@ -82,57 +84,98 @@ export default function Settings({ companies, fetchCompanies }) {
     await axios.delete(`${API_URL}/units/${id}`); fetchOptions();
   };
 
+  // Helper to render section headers with Add buttons
+  const sectionHeader = (title, onClick) => (
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'space-between', 
+      alignItems: 'center', 
+      width: '100%',
+      padding: '4px 0' // Adds a bit of vertical breathing room
+    }}>
+      <Text strong style={{ fontSize: '18px' }}>
+        {title}
+      </Text>
+      <Button 
+        type="primary" 
+        icon={<PlusOutlined />} 
+        onClick={(e) => { 
+          e.stopPropagation(); // Prevents the panel from toggling when clicking the button
+          onClick(); 
+        }}
+      >
+        Add
+      </Button>
+    </div>
+  );
+
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      {/* Companies */}
-      <Card title="Manage Companies" extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddModalVisible(true)}>Add Company</Button>}>
-        <List itemLayout="horizontal" dataSource={companies} renderItem={(company) => (
-            <List.Item actions={[
-                <Button type="text" icon={<EditOutlined />} onClick={() => {setEditingCompany(company); setEditCompanyName(company.name); setIsEditModalVisible(true);}}>Edit</Button>,
-                <Popconfirm title="Delete company?" onConfirm={() => handleDeleteCompany(company.id)}><Button type="text" danger icon={<DeleteOutlined />}>Delete</Button></Popconfirm>
+    <div style={{ maxWidth: 800, margin: '24px auto' }}>
+      <h2 style={{ marginBottom: 24 }}><SettingOutlined /> System Settings</h2>
+      
+      <Collapse defaultActiveKey={['1']} expandIconPosition="end" accordion>
+        {/* Companies */}
+        <Panel header={sectionHeader("Companies", () => setIsAddModalVisible(true))} key="1">
+          <List 
+            itemLayout="horizontal" 
+            dataSource={companies} 
+            renderItem={(company) => (
+              <List.Item actions={[
+                <Button type="link" icon={<EditOutlined />} onClick={() => {setEditingCompany(company); setEditCompanyName(company.name); setIsEditModalVisible(true);}}>Edit</Button>,
+                <Popconfirm title="Delete company?" onConfirm={() => handleDeleteCompany(company.id)}><Button type="link" danger icon={<DeleteOutlined />}>Delete</Button></Popconfirm>
               ]}>
-              <List.Item.Meta title={company.name} />
-            </List.Item>
-          )} />
-      </Card>
-      <Divider />
+                <List.Item.Meta title={company.name} />
+              </List.Item>
+            )} 
+          />
+        </Panel>
 
-      {/* Yards */}
-      <Card title="Manage Yards" extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddYardModalVisible(true)}>Add Yard</Button>}>
-        <List itemLayout="horizontal" dataSource={yards} renderItem={(yard) => (
-            <List.Item actions={[
-                <Popconfirm title="Delete yard?" onConfirm={() => handleDeleteYard(yard.id)}><Button type="text" danger icon={<DeleteOutlined />}>Delete</Button></Popconfirm>
+        {/* Yards */}
+        <Panel header={sectionHeader("Yards", () => setIsAddYardModalVisible(true))} key="2">
+          <List 
+            itemLayout="horizontal" 
+            dataSource={yards} 
+            renderItem={(yard) => (
+              <List.Item actions={[
+                <Popconfirm title="Delete yard?" onConfirm={() => handleDeleteYard(yard.id)}><Button type="link" danger icon={<DeleteOutlined />}>Delete</Button></Popconfirm>
               ]}>
-              <List.Item.Meta title={yard.name} />
-            </List.Item>
-          )} />
-      </Card>
-      <Divider />
+                <List.Item.Meta title={yard.name} />
+              </List.Item>
+            )} 
+          />
+        </Panel>
 
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
         {/* Currencies */}
-        <Card title="Custom Currencies" extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddCurrencyVisible(true)}>Add Currency</Button>}>
-          <List itemLayout="horizontal" dataSource={currencies} renderItem={(c) => (
-              <List.Item actions={[<Popconfirm title="Delete?" onConfirm={() => handleDeleteCurrency(c.id)}><Button type="text" danger icon={<DeleteOutlined />}>Delete</Button></Popconfirm>]}>
+        <Panel header={sectionHeader("Currencies", () => setIsAddCurrencyVisible(true))} key="3">
+          <List 
+            itemLayout="horizontal" 
+            dataSource={currencies} 
+            renderItem={(c) => (
+              <List.Item actions={[<Popconfirm title="Delete?" onConfirm={() => handleDeleteCurrency(c.id)}><Button type="link" danger icon={<DeleteOutlined />}>Delete</Button></Popconfirm>]}>
                 <List.Item.Meta title={`${c.label} (${c.symbol})`} description={`Code: ${c.code}`} />
               </List.Item>
-            )} />
-        </Card>
+            )} 
+          />
+        </Panel>
 
         {/* Units */}
-        <Card title="Custom Weight Units" extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddUnitVisible(true)}>Add Unit</Button>}>
-          <List itemLayout="horizontal" dataSource={units} renderItem={(u) => (
-              <List.Item actions={[<Popconfirm title="Delete?" onConfirm={() => handleDeleteUnit(u.id)}><Button type="text" danger icon={<DeleteOutlined />}>Delete</Button></Popconfirm>]}>
-                <List.Item.Meta title={u.label} description={`Value: ${u.value}`} />
+        <Panel header={sectionHeader("Weight Units", () => setIsAddUnitVisible(true))} key="4">
+          <List 
+            itemLayout="horizontal" 
+            dataSource={units} 
+            renderItem={(u) => (
+              <List.Item actions={[<Popconfirm title="Delete?" onConfirm={() => handleDeleteUnit(u.id)}><Button type="link" danger icon={<DeleteOutlined />}>Delete</Button></Popconfirm>]}>
+                <List.Item.Meta title={u.label} description={`Unit: ${u.value}`} />
               </List.Item>
-            )} />
-        </Card>
-      </Space>
+            )} 
+          />
+        </Panel>
+      </Collapse>
 
-      {/* Modals */}
-      <Modal title="Add New Company" open={isAddModalVisible} onOk={handleAddCompany} onCancel={() => setIsAddModalVisible(false)}><Input value={newCompanyName} onChange={(e) => setNewCompanyName(e.target.value)}/></Modal>
-      <Modal title="Edit Company" open={isEditModalVisible} onOk={handleUpdateCompany} onCancel={() => setIsEditModalVisible(false)}><Input value={editCompanyName} onChange={(e) => setEditCompanyName(e.target.value)}/></Modal>
-      <Modal title="Add New Yard" open={isAddYardModalVisible} onOk={handleAddYard} onCancel={() => setIsAddYardModalVisible(false)}><Input value={newYardName} onChange={(e) => setNewYardName(e.target.value)}/></Modal>
+      {/* --- Modals --- */}
+      <Modal title="Add New Company" open={isAddModalVisible} onOk={handleAddCompany} onCancel={() => setIsAddModalVisible(false)}><Input value={newCompanyName} onChange={(e) => setNewCompanyName(e.target.value)} placeholder="Company Name" /></Modal>
+      <Modal title="Edit Company" open={isEditModalVisible} onOk={handleUpdateCompany} onCancel={() => setIsEditModalVisible(false)}><Input value={editCompanyName} onChange={(e) => setEditCompanyName(e.target.value)} /></Modal>
+      <Modal title="Add New Yard" open={isAddYardModalVisible} onOk={handleAddYard} onCancel={() => setIsAddYardModalVisible(false)}><Input value={newYardName} onChange={(e) => setNewYardName(e.target.value)} placeholder="Yard Name" /></Modal>
       
       <Modal title="Add Currency" open={isAddCurrencyVisible} onCancel={() => setIsAddCurrencyVisible(false)} onOk={() => currencyForm.submit()}>
         <Form form={currencyForm} layout="vertical" onFinish={handleAddCurrency}>
