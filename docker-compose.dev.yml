@@ -23,6 +23,7 @@ services:
       - .env
     volumes:
       - ./backend:/app
+      - ./backups:/backups
     depends_on:
       - db
 

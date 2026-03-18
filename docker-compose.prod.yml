@@ -21,6 +21,8 @@ services:
       - "8001:8000"
     env_file:
       - .env
+    volumes:
+      - ./backups:/backups
     depends_on:
       - db
 

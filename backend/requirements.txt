@@ -5,3 +5,4 @@ alembic
 uvicorn
 sqlalchemy
 pydantic
+APScheduler
