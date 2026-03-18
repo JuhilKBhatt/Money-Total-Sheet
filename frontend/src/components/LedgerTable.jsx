@@ -101,7 +101,7 @@ export default function LedgerTable({
       loading={loading} 
       title={() => (
         <div className="ledger-repeating-title">
-          {Array(8).fill(`${(companyName || 'COMPANY').toUpperCase()}`).join(' \u00A0\u00A0•\u00A0\u00A0 ')}
+          {Array(3).fill(`${(companyName || 'COMPANY').toUpperCase()}`).join(' \u00A0\u00A0•\u00A0\u00A0 ')}
         </div>
       )}
       rowClassName={(record) => {
