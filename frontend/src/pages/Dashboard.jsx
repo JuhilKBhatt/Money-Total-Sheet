@@ -23,8 +23,8 @@ export default function Dashboard({ companies, loading }) {
     key: String(company.id),
     children: (
       <div style={{ padding: '10px 0' }}>
-        <Card title={`${company.name} Ledger`} bordered={false}>
-          <CompanyData companyId={company.id} />
+        <Card bordered={false} styles={{ body: { padding: '10px 0' } }}>
+          <CompanyData companyId={company.id} companyName={company.name} />
         </Card>
       </div>
     ),

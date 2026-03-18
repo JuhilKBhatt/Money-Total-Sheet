@@ -8,7 +8,7 @@ const formatMoney = (val) => Number(val).toLocaleString('en-US', { minimumFracti
 const formatWeight = (val) => Number(val).toLocaleString('en-US');
 
 export default function LedgerTable({ 
-  tableData, loading, grandTotal, defaultCurrency, openEditDeduction, handleDeleteDeduction, openEditPickup, handleDeletePickup 
+  tableData, loading, grandTotal, defaultCurrency, openEditDeduction, handleDeleteDeduction, openEditPickup, handleDeletePickup, companyName 
 }) {
   
   const columns = [
@@ -44,10 +44,18 @@ export default function LedgerTable({
     },
     {
       title: 'Total', dataIndex: 'total', key: 'total', width: 120,
+      onCell: (record) => {
+        if (record.type === 'balance') return { colSpan: 2 };
+        return {};
+      },
       render: (val, record) => {
         if (val === undefined || val === '') return '';
         const curr = record.currency || '$';
-        if (record.type === 'balance') return <strong style={{ fontSize: '15px' }}>{curr}{formatMoney(val)}</strong>;
+        
+        if (record.type === 'balance') return <strong style={{ fontSize: '16px' }}>{curr}{formatMoney(val)}</strong>;
+        
+        if (record.type === 'deduction') return `-${curr}${formatMoney(val)}`;
+        
         return `${curr}${formatMoney(val)}`;
       }
     },
@@ -85,7 +93,17 @@ export default function LedgerTable({
   ];
 
   return (
-    <Table dataSource={tableData} columns={columns} pagination={false} bordered loading={loading} size="small"
+    <Table 
+      dataSource={tableData} 
+      columns={columns} 
+      pagination={false} 
+      bordered 
+      loading={loading} 
+      title={() => (
+        <div className="ledger-repeating-title">
+          {Array(8).fill(`${(companyName || 'COMPANY').toUpperCase()}`).join(' \u00A0\u00A0•\u00A0\u00A0 ')}
+        </div>
+      )}
       rowClassName={(record) => {
         if (record.type === 'deduction') return 'row-deduction';
         if (record.type === 'balance') return 'row-balance';
@@ -93,9 +111,9 @@ export default function LedgerTable({
       }}
       summary={() => (
         <Table.Summary.Row style={{ background: '#f0f0f0' }}>
-          <Table.Summary.Cell index={0} colSpan={5} align="right"><Text strong style={{ fontSize: '16px' }}>Remaining Balance:</Text></Table.Summary.Cell>
+          <Table.Summary.Cell index={0} colSpan={5} align="right"><Text strong style={{ fontSize: '18px', color: '#000' }}>Remaining Balance:</Text></Table.Summary.Cell>
           <Table.Summary.Cell index={1} colSpan={2}>
-            <Text strong type={grandTotal < 0 ? "danger" : "success"} style={{ fontSize: '16px' }}>
+            <Text strong type={grandTotal < 0 ? "danger" : "success"} style={{ fontSize: '18px' }}>
               {defaultCurrency}{formatMoney(grandTotal)}
             </Text>
           </Table.Summary.Cell>

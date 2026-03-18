@@ -30,24 +30,76 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-/* Ledger Table Styling */
+/* =========================================
+   Ledger Table Styling Overrides
+========================================= */
+
+/* Deep Black Borders for Table */
+.ant-table-bordered .ant-table-container,
+.ant-table-bordered .ant-table-cell,
+.ant-table-bordered .ant-table-thead > tr > th,
+.ant-table-bordered .ant-table-tbody > tr > td,
+.ant-table-bordered .ant-table-summary > tr > td {
+  border-color: #000000 !important;
+  border-width: 1px !important;
+}
+
+/* Make Table Headings Larger & Bolder */
+.ant-table-thead > tr > th {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  background-color: #eaeaea !important;
+  color: #000 !important;
+  text-transform: uppercase;
+}
+
+/* Make Table Body Font Larger */
+.ant-table-tbody > tr > td {
+  font-size: 15px !important;
+  color: #000000 !important;
+  font-weight: 600 !important; /* Makes the normal text much heavier */
+}
+
+/* Repeating Ledger Title (Merged Across Top) */
+.ledger-repeating-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #000;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  background-color: #f0f0f0;
+  padding: 12px 0;
+  border: 1px solid #000; /* Applies border to all 4 sides */
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* Zebra Striping: Light grey background for odd rows (ignoring special rows) */
+.ant-table-tbody > tr:nth-child(odd):not(.row-deduction):not(.row-balance) > td {
+  background-color: #f7f7f7 !important;
+}
+
+/* Deduction Rows - Light Red */
 .row-deduction td {
-  background-color: #c4d79b !important; /* Excel Green */
+  background-color: #ffe6e6 !important; 
 }
 
+/* Balance Rows - Standard Grey with bolder borders */
 .row-balance td {
-  background-color: #e6e6e6 !important; /* Excel Grey */
-  border-top: 2px solid #a0a0a0 !important;
-  border-bottom: 2px solid #a0a0a0 !important;
+  background-color: #e6e6e6 !important; 
+  border-top: 2px solid #000 !important;
+  border-bottom: 2px solid #000 !important;
 }
 
+/* Let the actions column inherit the row's background color so zebra striping works */
 .table-actions-col {
-  background-color: #fff !important; /* Keep actions column white so it doesn't clash */
+  background-color: inherit !important; 
 }
+
 
 /* --- Mobile / Phone Screen Support --- */
 @media screen and (max-width: 768px) {
-  /* Stack the header and menu vertically */
   .app-header {
     padding: 0 16px;
     flex-direction: column;
@@ -65,7 +117,6 @@
     justify-content: center;
   }
 
-  /* Reduce padding on the main content area */
   .app-content {
     padding: 16px; 
   }
@@ -74,7 +125,6 @@
     padding: 16px;
   }
 
-  /* Force side-by-side form inputs to stack vertically on small screens */
   .ant-space-compact,
   .ant-space {
     flex-wrap: wrap;
@@ -86,7 +136,6 @@
     max-width: 100%;
   }
 
-  /* Ensure tables scroll horizontally instead of squishing off-screen */
   .ant-table-wrapper {
     overflow-x: auto;
   }

@@ -11,7 +11,7 @@ import DeductionModal from './DeductionModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-export default function CompanyData({ companyId }) {
+export default function CompanyData({ companyId, companyName }) {
   const [pickups, setPickups] = useState([]);
   const [deductions, setDeductions] = useState([]);
   const [yards, setYards] = useState([]);
@@ -228,9 +228,12 @@ export default function CompanyData({ companyId }) {
       </Space>
 
       {loading ? <Spin style={{ display: 'block', margin: '40px auto' }} /> : (
-        <LedgerTable tableData={tableData} loading={loading} grandTotal={grandTotal} defaultCurrency={defaultCurrency}
+        <LedgerTable 
+          tableData={tableData} loading={loading} grandTotal={grandTotal} defaultCurrency={defaultCurrency}
           openEditDeduction={openEditDeduction} handleDeleteDeduction={handleDeleteDeduction}
-          openEditPickup={openEditPickup} handleDeletePickup={handleDeletePickup} />
+          openEditPickup={openEditPickup} handleDeletePickup={handleDeletePickup}
+          companyName={companyName} 
+        />
       )}
 
       <PickupModal visible={isPickupModalVisible} onCancel={() => { setIsPickupModalVisible(false); setEditingId(null); }}
