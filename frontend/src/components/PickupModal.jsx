@@ -21,7 +21,7 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
           </Form.Item>
           <Form.Item name="currency" label="Currency" rules={[{ required: true }]}>
             <Select style={{ width: 100 }}>
-              {currencies.map(c => <Select.Option key={c.id} value={c.symbol}>{c.label}</Select.Option>)}
+              {currencies.map(c => <Select.Option key={c.id} value={c.label}>{c.label}</Select.Option>)}
             </Select>
           </Form.Item>
         </Space>

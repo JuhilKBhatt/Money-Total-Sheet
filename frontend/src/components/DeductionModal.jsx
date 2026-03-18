@@ -13,7 +13,7 @@ export default function DeductionModal({ visible, onCancel, onSubmit, form, curr
              <Space.Compact>
                <Form.Item name="currency" noStyle rules={[{ required: true }]}>
                   <Select style={{ width: 80 }}>
-                    {currencies.map(c => <Select.Option key={c.id} value={c.symbol}>{c.symbol}</Select.Option>)}
+                    {currencies.map(c => <Select.Option key={c.id} value={c.label}>{c.label}</Select.Option>)}
                   </Select>
                </Form.Item>
                <Form.Item name="amount" noStyle rules={[{ required: true }]}>

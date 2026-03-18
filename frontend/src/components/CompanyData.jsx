@@ -62,7 +62,7 @@ export default function CompanyData({ companyId, companyName }) {
     }
   };
 
-  const defaultCurrency = currencies.length > 0 ? currencies[0].symbol : '$';
+  const defaultCurrency = currencies.length > 0 ? currencies[0].label : '$';
   const defaultUnit = units.length > 0 ? units[0].value : 'kg';
 
   // --- Modals ---
