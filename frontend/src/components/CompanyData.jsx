@@ -336,6 +336,11 @@ export default function CompanyData({ companyId, companyName }) {
     grandTotals[c] -= (deduction.amount || 0);
   });
 
+  // Extract unique metal names for the autocomplete feature
+  const metalOptions = Array.from(
+    new Set(pickups.flatMap(p => (p.metals || []).map(m => m.metal_name)))
+  ).filter(Boolean).sort().map(name => ({ value: name }));
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
       
@@ -447,11 +452,27 @@ export default function CompanyData({ companyId, companyName }) {
         </Space>
       </div>
 
-      <PickupModal visible={isPickupModalVisible} onCancel={() => { setIsPickupModalVisible(false); setEditingId(null); }}
-        onSubmit={handlePickupSubmit} form={pickupForm} yards={yards} currencies={currencies} units={units} editingId={editingId} defaultUnit={defaultUnit} />
+      <PickupModal 
+        visible={isPickupModalVisible} 
+        onCancel={() => { setIsPickupModalVisible(false); setEditingId(null); }}
+        onSubmit={handlePickupSubmit} 
+        form={pickupForm} 
+        yards={yards} 
+        currencies={currencies} 
+        units={units} 
+        editingId={editingId} 
+        defaultUnit={defaultUnit} 
+        metalOptions={metalOptions} 
+      />
       
-      <DeductionModal visible={isDeductionModalVisible} onCancel={() => { setIsDeductionModalVisible(false); setEditingId(null); }}
-        onSubmit={handleDeductionSubmit} form={deductionForm} currencies={currencies} editingId={editingId} />
+      <DeductionModal 
+        visible={isDeductionModalVisible} 
+        onCancel={() => { setIsDeductionModalVisible(false); setEditingId(null); }}
+        onSubmit={handleDeductionSubmit} 
+        form={deductionForm} 
+        currencies={currencies} 
+        editingId={editingId} 
+      />
     </div>
   );
 }

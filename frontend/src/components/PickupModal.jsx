@@ -1,11 +1,11 @@
 /* ./frontend/src/components/PickupModal.jsx */
 import React from 'react';
-import { Modal, Form, Space, DatePicker, Select, Input, Typography, InputNumber, Button } from 'antd';
+import { Modal, Form, Space, DatePicker, Select, Input, Typography, InputNumber, Button, AutoComplete } from 'antd';
 import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 
 const { Text, Title } = Typography;
 
-export default function PickupModal({ visible, onCancel, onSubmit, form, yards, currencies, units, editingId, defaultUnit }) {
+export default function PickupModal({ visible, onCancel, onSubmit, form, yards, currencies, units, editingId, defaultUnit, metalOptions }) {
   const currentMetals = Form.useWatch('metals', form) || [];
   const liveTripTotal = currentMetals.reduce((sum, metal) => sum + ((metal?.net_weight || 0) * (metal?.price_per_unit || 0)), 0);
 
@@ -38,7 +38,14 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
                 {fields.map(({ key, name, ...restField }) => (
                   <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
                     <Form.Item {...restField} name={[name, 'metal_name']} rules={[{ required: true, message: 'Please enter the metal type' }]}>
-                      <Input placeholder="Metal Type (e.g. Copper)" />
+                      <AutoComplete
+                        options={metalOptions}
+                        placeholder="Metal Type (e.g. Copper)"
+                        filterOption={(inputValue, option) =>
+                          option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+                        }
+                        style={{ width: 180 }}
+                      />
                     </Form.Item>
 
                     <Space.Compact>
