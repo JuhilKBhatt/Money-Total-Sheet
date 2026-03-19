@@ -6,3 +6,5 @@ uvicorn
 sqlalchemy
 pydantic
 APScheduler
+pandas
+openpyxl
