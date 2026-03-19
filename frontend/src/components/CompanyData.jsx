@@ -1,7 +1,7 @@
 /* ./frontend/src/components/CompanyData.jsx */
 import React, { useState, useEffect } from 'react';
-import { Button, message, Spin, Form, Space } from 'antd';
-import { PlusOutlined, DollarOutlined } from '@ant-design/icons';
+import { Button, message, Spin, Form, Space, DatePicker, Typography } from 'antd';
+import { PlusOutlined, DollarOutlined, ArrowUpOutlined, ArrowDownOutlined, ReloadOutlined, FilterOutlined, CloseOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
 
@@ -22,6 +22,11 @@ export default function CompanyData({ companyId, companyName }) {
   const [isPickupModalVisible, setIsPickupModalVisible] = useState(false);
   const [isDeductionModalVisible, setIsDeductionModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  
+  const [dateRange, setDateRange] = useState(null);
+  
+  // New state for click-toggle
+  const [isPanelExpanded, setIsPanelExpanded] = useState(false);
 
   const [pickupForm] = Form.useForm();
   const [deductionForm] = Form.useForm();
@@ -225,7 +230,7 @@ export default function CompanyData({ companyId, companyName }) {
     });
 
     const data = [];
-    let runningBalances = {}; // Tracks balances separately per currency
+    let runningBalances = {};
 
     events.forEach((event, index) => {
       const nextEvent = events[index + 1];
@@ -246,6 +251,7 @@ export default function CompanyData({ companyId, companyName }) {
               key: `metal-${metal.id}`,
               type: 'metal',
               rawPickup: event,
+              isoDate: event.date,
               date: dayjs(event.date).format('DD/MM/YY'),
               yardNotes: [event.yard, event.notes].filter(Boolean).join(' - '),
               metal: metal.metal_name,
@@ -259,12 +265,12 @@ export default function CompanyData({ companyId, companyName }) {
           });
         }
         
-        // Push ALL tracked balances at this checkpoint
         if (!nextEvent || nextEvent.eventType === 'deduction' || (nextEvent.eventType === 'pickup' && nextEvent.date !== event.date)) {
           Object.keys(runningBalances).sort().forEach(curr => {
             data.push({ 
               key: `bal-p-${event.id}-${curr}`, 
               type: 'balance', 
+              isoDate: event.date,
               priceLabel: `BAL (${curr}) till date >`, 
               total: runningBalances[curr], 
               currency: curr 
@@ -277,6 +283,7 @@ export default function CompanyData({ companyId, companyName }) {
           key: `deduction-${event.id}`,
           type: 'deduction',
           rawDeduction: event,
+          isoDate: event.date,
           date: dayjs(event.date).format('DD/MM/YY'), 
           yardNotes: event.notes || 'Deduction', 
           metal: '', kg: '', price: '',
@@ -285,12 +292,12 @@ export default function CompanyData({ companyId, companyName }) {
           rowSpan: 1
         });
         
-        // Push ALL tracked balances at this checkpoint
         if (!nextEvent || nextEvent.eventType === 'pickup') {
           Object.keys(runningBalances).sort().forEach(curr => {
             data.push({ 
               key: `bal-d-${event.id}-${curr}`, 
               type: 'balance', 
+              isoDate: event.date,
               priceLabel: `BAL (${curr}) till date >`, 
               total: runningBalances[curr], 
               currency: curr 
@@ -303,9 +310,20 @@ export default function CompanyData({ companyId, companyName }) {
     return data;
   };
 
-  const tableData = buildLedgerData();
+  const rawTableData = buildLedgerData();
   
-  // Calculate Grand Totals grouped by currency
+  let tableData = rawTableData;
+  if (dateRange && dateRange[0] && dateRange[1]) {
+    const startDate = dateRange[0].startOf('day');
+    const endDate = dateRange[1].endOf('day');
+    tableData = rawTableData.filter(row => {
+      if (!row.isoDate) return true;
+      const rowDate = dayjs(row.isoDate);
+      return (rowDate.isSame(startDate, 'day') || rowDate.isAfter(startDate, 'day')) && 
+             (rowDate.isSame(endDate, 'day') || rowDate.isBefore(endDate, 'day'));
+    });
+  }
+  
   const grandTotals = {};
   pickups.forEach(pickup => {
     const c = pickup.currency || defaultCurrency;
@@ -319,7 +337,83 @@ export default function CompanyData({ companyId, companyName }) {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      
+      {/* Click-Toggle Collapsible Floating Panel */}
+      <div 
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '24px',
+          zIndex: 999,
+          background: 'rgba(255, 255, 255, 0.98)',
+          borderRadius: '12px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          border: '1px solid #f0f0f0',
+          overflow: 'hidden',
+          transition: 'all 0.3s ease',
+        }}
+      >
+        {!isPanelExpanded ? (
+          <div 
+            onClick={() => setIsPanelExpanded(true)}
+            style={{ width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            title="Open Control Panel"
+          >
+            <FilterOutlined style={{ fontSize: '20px', color: '#595959' }} />
+          </div>
+        ) : (
+          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography.Text strong style={{ fontSize: '13px' }}>
+                Filter by Date
+              </Typography.Text>
+              <Button 
+                type="text" 
+                icon={<CloseOutlined />} 
+                size="small" 
+                onClick={() => setIsPanelExpanded(false)} 
+                style={{ color: '#999' }}
+                title="Close Control Panel"
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <DatePicker.RangePicker 
+                value={dateRange}
+                format="DD/MM/YYYY" 
+                onChange={(dates) => setDateRange(dates)} 
+                style={{ width: '250px' }}
+                allowClear
+              />
+              <Button 
+                icon={<ReloadOutlined />} 
+                onClick={() => setDateRange(null)}
+                title="Reset Date Filter"
+              >
+                Reset
+              </Button>
+            </div>
+            <Space style={{ display: 'flex' }}>
+              <Button 
+                icon={<ArrowUpOutlined />} 
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                style={{ flex: 1 }}
+              >
+                Top
+              </Button>
+              <Button 
+                icon={<ArrowDownOutlined />} 
+                onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
+                style={{ flex: 1 }}
+              >
+                Bottom
+              </Button>
+            </Space>
+          </div>
+        )}
+      </div>
+
       {loading ? <Spin style={{ display: 'block', margin: '40px auto' }} /> : (
         <LedgerTable 
           tableData={tableData} loading={loading} grandTotals={grandTotals} defaultCurrency={defaultCurrency}
