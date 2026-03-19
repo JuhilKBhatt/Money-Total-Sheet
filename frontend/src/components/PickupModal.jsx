@@ -41,7 +41,14 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
 
                     <Space.Compact>
                       <Form.Item {...restField} name={[name, 'net_weight']} noStyle>
-                        <InputNumber placeholder="Weight" min={0} step={1} />
+                        <InputNumber 
+                          placeholder="Weight" 
+                          min={0} 
+                          step={1} 
+                          style={{ width: '100%' }}
+                          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                          parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+                        />
                       </Form.Item>
                       <Form.Item {...restField} name={[name, 'weight_unit']} initialValue={defaultUnit} noStyle>
                         <Select style={{ width: 80 }}>
@@ -51,7 +58,14 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
                     </Space.Compact>
 
                     <Form.Item {...restField} name={[name, 'price_per_unit']}>
-                      <InputNumber placeholder="Price per unit" min={0} step={0.01} />
+                      <InputNumber 
+                        placeholder="Price per unit" 
+                        min={0} 
+                        step={0.01} 
+                        style={{ width: '100%' }}
+                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+                      />
                     </Form.Item>
                     <MinusCircleOutlined onClick={() => remove(name)} style={{ color: 'red' }} />
                   </Space>

@@ -17,7 +17,13 @@ export default function DeductionModal({ visible, onCancel, onSubmit, form, curr
                   </Select>
                </Form.Item>
                <Form.Item name="amount" noStyle rules={[{ required: true }]}>
-                 <InputNumber min={0.01} step={0.01} style={{ width: '100%' }} />
+                 <InputNumber 
+                   min={0} 
+                   step={0.01} 
+                   style={{ width: '100%' }} 
+                   formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                   parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+                 />
                </Form.Item>
              </Space.Compact>
           </Form.Item>
