@@ -13,13 +13,15 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
     <Modal title={editingId ? "Edit Pickup" : "Add New Pickup"} open={visible} onCancel={onCancel} footer={null} width={800}>
       <Form form={form} layout="vertical" onFinish={onSubmit}>
         <Space size="large" style={{ display: 'flex' }}>
-          <Form.Item name="date" label="Date" rules={[{ required: true }]}><DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="yard" label="Yard" rules={[{ required: true }]}>
+          <Form.Item name="date" label="Date" rules={[{ required: true, message: 'Please select a date' }]}>
+            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="yard" label="Yard" rules={[{ required: true, message: 'Please select a yard' }]}>
             <Select placeholder="Select a Yard" style={{ width: 180 }}>
               {yards.map(yard => <Select.Option key={yard.id} value={yard.name}>{yard.name}</Select.Option>)}
             </Select>
           </Form.Item>
-          <Form.Item name="currency" label="Currency" rules={[{ required: true }]}>
+          <Form.Item name="currency" label="Currency" rules={[{ required: true, message: 'Please select a currency' }]}>
             <Select style={{ width: 100 }}>
               {currencies.map(c => <Select.Option key={c.id} value={c.label}>{c.label}</Select.Option>)}
             </Select>
@@ -35,7 +37,7 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
               <>
                 {fields.map(({ key, name, ...restField }) => (
                   <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                    <Form.Item {...restField} name={[name, 'metal_name']} rules={[{ required: true }]}>
+                    <Form.Item {...restField} name={[name, 'metal_name']} rules={[{ required: true, message: 'Please enter the metal type' }]}>
                       <Input placeholder="Metal Type (e.g. Copper)" />
                     </Form.Item>
 
