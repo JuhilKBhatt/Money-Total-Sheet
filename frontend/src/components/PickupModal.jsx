@@ -6,7 +6,12 @@ import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 const { Text, Title } = Typography;
 
 export default function PickupModal({ visible, onCancel, onSubmit, form, yards, currencies, units, editingId, defaultUnit, metalOptions }) {
+  // Watch the metals array to calculate the live total
   const currentMetals = Form.useWatch('metals', form) || [];
+  
+  // Watch the selected currency so we can display it dynamically (defaults to '$')
+  const currentCurrency = Form.useWatch('currency', form) || '$'; 
+  
   const liveTripTotal = currentMetals.reduce((sum, metal) => sum + ((metal?.net_weight || 0) * (metal?.price_per_unit || 0)), 0);
 
   return (
@@ -68,6 +73,7 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
 
                     <Form.Item {...restField} name={[name, 'price_per_unit']}>
                       <InputNumber 
+                        addonBefore={currentCurrency} /* Added dynamic currency block here */
                         placeholder="Price per unit" 
                         min={0} 
                         step={0.01} 
@@ -86,7 +92,10 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
             )}
           </Form.List>
           <div style={{ textAlign: 'right', marginTop: 15 }}>
-            <Title level={5} style={{ margin: 0 }}>Live Total: ${liveTripTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Title>
+            {/* Live total currency now updates dynamically based on the form selection */}
+            <Title level={5} style={{ margin: 0 }}>
+              Live Total: {currentCurrency}{liveTripTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Title>
           </div>
         </div>
 
