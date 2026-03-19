@@ -8,7 +8,7 @@ const formatMoney = (val) => Number(val).toLocaleString('en-US', { minimumFracti
 const formatWeight = (val) => Number(val).toLocaleString('en-US');
 
 export default function LedgerTable({ 
-  tableData, loading, grandTotal, defaultCurrency, openEditDeduction, handleDeleteDeduction, openEditPickup, handleDeletePickup, companyName 
+  tableData, loading, grandTotals, defaultCurrency, openEditDeduction, handleDeleteDeduction, openEditPickup, handleDeletePickup, companyName 
 }) {
   
   const columns = [
@@ -109,16 +109,39 @@ export default function LedgerTable({
         if (record.type === 'balance') return 'row-balance';
         return '';
       }}
-      summary={() => (
-        <Table.Summary.Row style={{ background: '#f0f0f0' }}>
-          <Table.Summary.Cell index={0} colSpan={5} align="right"><Text strong style={{ fontSize: '18px', color: '#000' }}>Remaining Balance:</Text></Table.Summary.Cell>
-          <Table.Summary.Cell index={1} colSpan={2}>
-            <Text strong type={grandTotal < 0 ? "danger" : "success"} style={{ fontSize: '18px' }}>
-              {defaultCurrency}{formatMoney(grandTotal)}
-            </Text>
-          </Table.Summary.Cell>
-        </Table.Summary.Row>
-      )}
+      summary={() => {
+        const currencies = Object.keys(grandTotals || {});
+        
+        if (currencies.length === 0) {
+          return (
+            <Table.Summary.Row style={{ background: '#f0f0f0' }}>
+              <Table.Summary.Cell index={0} colSpan={5} align="right"><Text strong style={{ fontSize: '18px', color: '#000' }}>Remaining Balance:</Text></Table.Summary.Cell>
+              <Table.Summary.Cell index={1} colSpan={2}>
+                <Text strong style={{ fontSize: '18px' }}>
+                  {defaultCurrency}0.00
+                </Text>
+              </Table.Summary.Cell>
+            </Table.Summary.Row>
+          );
+        }
+
+        return (
+          <>
+            {currencies.map((curr) => (
+              <Table.Summary.Row style={{ background: '#f0f0f0' }} key={`summary-${curr}`}>
+                <Table.Summary.Cell index={0} colSpan={5} align="right">
+                  <Text strong style={{ fontSize: '18px', color: '#000' }}>Remaining Balance ({curr}):</Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={1} colSpan={2}>
+                  <Text strong type={grandTotals[curr] < 0 ? "danger" : "success"} style={{ fontSize: '18px' }}>
+                    {curr}{formatMoney(grandTotals[curr])}
+                  </Text>
+                </Table.Summary.Cell>
+              </Table.Summary.Row>
+            ))}
+          </>
+        );
+      }}
     />
   );
 }

@@ -106,9 +106,8 @@ export default function CompanyData({ companyId, companyName }) {
   // --- Handlers ---
   const handlePickupSubmit = async (values) => {
     try {
-      // Safely map and force cast all fields to avoid 422 errors
       const cleanMetals = (values.metals || [])
-        .filter(metal => metal && metal.metal_name) // filter out invalid empty rows
+        .filter(metal => metal && metal.metal_name)
         .map(metal => {
           let nw = parseFloat(metal.net_weight);
           if (isNaN(nw)) nw = 0.0;
@@ -124,7 +123,6 @@ export default function CompanyData({ companyId, companyName }) {
           };
         });
 
-      // Construct base payload
       const payload = {
         date: values.date ? values.date.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
         yard: String(values.yard || ""),
@@ -147,7 +145,6 @@ export default function CompanyData({ companyId, companyName }) {
       fetchCompanyData();
     } catch (error) {
       console.error("Error saving pickup:", error);
-      // Detailed 422 error parsing to show in UI
       if (error.response && error.response.status === 422) {
         const details = error.response.data.detail;
         message.error(`Validation Error: ${JSON.stringify(details)}`, 5);
@@ -228,10 +225,15 @@ export default function CompanyData({ companyId, companyName }) {
     });
 
     const data = [];
-    let runningBalance = 0;
+    let runningBalances = {}; // Tracks balances separately per currency
 
     events.forEach((event, index) => {
       const nextEvent = events[index + 1];
+      const eventCurr = event.currency || defaultCurrency;
+
+      if (runningBalances[eventCurr] === undefined) {
+        runningBalances[eventCurr] = 0;
+      }
 
       if (event.eventType === 'pickup') {
         const metalCount = event.metals && event.metals.length > 0 ? event.metals.length : 1;
@@ -239,7 +241,7 @@ export default function CompanyData({ companyId, companyName }) {
         if (event.metals && event.metals.length > 0) {
           event.metals.forEach((metal, mIndex) => {
             const metalTotal = metal.net_weight * metal.price_per_unit;
-            runningBalance += metalTotal;
+            runningBalances[eventCurr] += metalTotal;
             data.push({
               key: `metal-${metal.id}`,
               type: 'metal',
@@ -251,16 +253,26 @@ export default function CompanyData({ companyId, companyName }) {
               weight_unit: metal.weight_unit || defaultUnit,
               price: metal.price_per_unit,
               total: metalTotal,
-              currency: event.currency || defaultCurrency,
+              currency: eventCurr,
               rowSpan: mIndex === 0 ? metalCount : 0
             });
           });
         }
+        
+        // Push ALL tracked balances at this checkpoint
         if (!nextEvent || nextEvent.eventType === 'deduction' || (nextEvent.eventType === 'pickup' && nextEvent.date !== event.date)) {
-          data.push({ key: `bal-p-${event.id}`, type: 'balance', priceLabel: 'BAL till date >', total: runningBalance, currency: event.currency || defaultCurrency });
+          Object.keys(runningBalances).sort().forEach(curr => {
+            data.push({ 
+              key: `bal-p-${event.id}-${curr}`, 
+              type: 'balance', 
+              priceLabel: `BAL (${curr}) till date >`, 
+              total: runningBalances[curr], 
+              currency: curr 
+            });
+          });
         }
       } else if (event.eventType === 'deduction') {
-        runningBalance -= event.amount;
+        runningBalances[eventCurr] -= event.amount;
         data.push({
           key: `deduction-${event.id}`,
           type: 'deduction',
@@ -269,11 +281,21 @@ export default function CompanyData({ companyId, companyName }) {
           yardNotes: event.notes || 'Deduction', 
           metal: '', kg: '', price: '',
           total: event.amount,
-          currency: event.currency || defaultCurrency,
+          currency: eventCurr,
           rowSpan: 1
         });
+        
+        // Push ALL tracked balances at this checkpoint
         if (!nextEvent || nextEvent.eventType === 'pickup') {
-          data.push({ key: `bal-d-${event.id}`, type: 'balance', priceLabel: 'BAL till date >', total: runningBalance, currency: event.currency || defaultCurrency });
+          Object.keys(runningBalances).sort().forEach(curr => {
+            data.push({ 
+              key: `bal-d-${event.id}-${curr}`, 
+              type: 'balance', 
+              priceLabel: `BAL (${curr}) till date >`, 
+              total: runningBalances[curr], 
+              currency: curr 
+            });
+          });
         }
       }
     });
@@ -282,15 +304,25 @@ export default function CompanyData({ companyId, companyName }) {
   };
 
   const tableData = buildLedgerData();
-  const totalPickups = pickups.reduce((sum, pickup) => sum + (pickup.metals || []).reduce((mSum, metal) => mSum + (metal.total || 0), 0), 0);
-  const totalDeductions = deductions.reduce((sum, deduction) => sum + (deduction.amount || 0), 0);
-  const grandTotal = totalPickups - totalDeductions;
+  
+  // Calculate Grand Totals grouped by currency
+  const grandTotals = {};
+  pickups.forEach(pickup => {
+    const c = pickup.currency || defaultCurrency;
+    if (!grandTotals[c]) grandTotals[c] = 0;
+    grandTotals[c] += (pickup.metals || []).reduce((mSum, metal) => mSum + (metal.total || 0), 0);
+  });
+  deductions.forEach(deduction => {
+    const c = deduction.currency || defaultCurrency;
+    if (!grandTotals[c]) grandTotals[c] = 0;
+    grandTotals[c] -= (deduction.amount || 0);
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {loading ? <Spin style={{ display: 'block', margin: '40px auto' }} /> : (
         <LedgerTable 
-          tableData={tableData} loading={loading} grandTotal={grandTotal} defaultCurrency={defaultCurrency}
+          tableData={tableData} loading={loading} grandTotals={grandTotals} defaultCurrency={defaultCurrency}
           openEditDeduction={openEditDeduction} handleDeleteDeduction={handleDeleteDeduction}
           openEditPickup={openEditPickup} handleDeletePickup={handleDeletePickup}
           companyName={companyName} 
