@@ -13,8 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Files will be bind-mounted, but we copy them just in case
 COPY . .
-
 EXPOSE 8000
 
 # Start with hot-reload enabled
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Run migrations automatically before starting the dev server
+CMD ["sh", "-c", "sleep 3 && alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000", "--reload"]

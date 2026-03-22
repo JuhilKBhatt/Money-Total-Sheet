@@ -13,8 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code into the container
 COPY . .
-
 EXPOSE 8000
 
 # Start without hot-reload for better performance and security
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Added a 3-second sleep to ensure the DB is ready, then run migrations, then start the server
+CMD ["sh", "-c", "sleep 3 && alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"]
