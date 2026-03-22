@@ -42,18 +42,18 @@ export default function CompanyData({ companyId, companyName }) {
         axios.get(`${API_URL}/yards/`),
         axios.get(`${API_URL}/currencies/`),
         axios.get(`${API_URL}/units/`),
-        axios.get(`${API_URL}/metals/unique-names`) // Fetch global metal names
+        axios.get(`${API_URL}/metals/unique-names`) 
       ]);
       setYards(yardsRes.data);
       setCurrencies(currRes.data);
       setUnits(unitsRes.data);
-      // Format array of strings into Ant Design AutoComplete option objects
       setGlobalMetalOptions(metalsRes.data.map(name => ({ value: name })));
     } catch (error) {
       console.error("Failed to load options");
     }
   };
 
+  const fetchCompanyData = async (silentRefresh = false) => {
     try {
       if (!silentRefresh) setLoading(true);
       const [pickupsRes, deductionsRes] = await Promise.all([
