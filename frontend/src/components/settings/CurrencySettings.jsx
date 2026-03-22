@@ -73,9 +73,9 @@ export default function CurrencySettings() {
 
       <Modal title={editingItem ? "Edit Currency" : "Add Currency"} open={isModalVisible} onCancel={() => setIsModalVisible(false)} onOk={() => form.submit()}>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item name="code" label="Code (e.g. AUD)" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="symbol" label="Symbol (e.g. $)" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="label" label="Label (e.g. AUD$)" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="code" label="Code (e.g. AUD)" rules={[{ required: true }]}><Input maxLength={10} /></Form.Item>
+          <Form.Item name="symbol" label="Symbol (e.g. $)" rules={[{ required: true }]}><Input maxLength={5} /></Form.Item>
+          <Form.Item name="label" label="Label (e.g. AUD$)" rules={[{ required: true }]}><Input maxLength={20} /></Form.Item>
         </Form>
       </Modal>
     </div>

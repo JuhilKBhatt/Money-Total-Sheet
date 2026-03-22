@@ -63,11 +63,11 @@ export default function CompanySettings({ companies, fetchCompanies }) {
       )} />
 
       <Modal title="Add Company" open={isAddModalVisible} onOk={handleAddCompany} onCancel={() => setIsAddModalVisible(false)}>
-        <Input value={newCompanyName} onChange={(e) => setNewCompanyName(e.target.value)} placeholder="Name" />
+        <Input value={newCompanyName} maxLength={100} onChange={(e) => setNewCompanyName(e.target.value)} placeholder="Name" />
       </Modal>
 
       <Modal title="Edit Company" open={isEditModalVisible} onOk={handleUpdateCompany} onCancel={() => setIsEditModalVisible(false)}>
-        <Input value={editCompanyName} onChange={(e) => setEditCompanyName(e.target.value)} />
+        <Input value={editCompanyName} maxLength={100} onChange={(e) => setEditCompanyName(e.target.value)} />
       </Modal>
     </div>
   );

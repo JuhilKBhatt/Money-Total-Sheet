@@ -19,8 +19,9 @@ export default function DeductionModal({ visible, onCancel, onSubmit, form, curr
                <Form.Item name="amount" noStyle rules={[{ required: true }]}>
                  <InputNumber 
                    min={0} 
+                   max={999999999}
                    step={0.01} 
-                   precision={2} /* Forces 2 decimal places */
+                   precision={2}
                    style={{ width: '100%' }} 
                    formatter={(value) => {
                      if (!value) return '';
@@ -35,7 +36,10 @@ export default function DeductionModal({ visible, onCancel, onSubmit, form, curr
           </Form.Item>
         </Space>
         
-        <Form.Item name="notes" label="Reason / Notes"><Input.TextArea rows={3} placeholder="e.g. Advance payment..." /></Form.Item>
+        <Form.Item name="notes" label="Reason / Notes">
+          <Input.TextArea rows={3} maxLength={1000} showCount placeholder="e.g. Advance payment..." />
+        </Form.Item>
+        
         <Form.Item style={{ textAlign: 'right' }}>
           <Button onClick={onCancel} style={{ marginRight: 8 }}>Cancel</Button>
           <Button danger type="primary" htmlType="submit">{editingId ? "Save Changes" : "Deduct Funds"}</Button>

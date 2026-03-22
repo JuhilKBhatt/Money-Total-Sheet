@@ -73,7 +73,7 @@ export default function YardSettings() {
 
       <Modal title={editingItem ? "Edit Yard" : "Add Yard"} open={isModalVisible} onCancel={() => setIsModalVisible(false)} onOk={() => form.submit()}>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item name="name" label="Yard Name" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="name" label="Yard Name" rules={[{ required: true }]}><Input maxLength={100} /></Form.Item>
         </Form>
       </Modal>
     </div>

@@ -73,8 +73,8 @@ export default function UnitSettings() {
 
       <Modal title={editingItem ? "Edit Unit" : "Add Unit"} open={isModalVisible} onCancel={() => setIsModalVisible(false)} onOk={() => form.submit()}>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item name="value" label="Value (e.g. kg)" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="label" label="Label (e.g. Kilograms)" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="value" label="Value (e.g. kg)" rules={[{ required: true }]}><Input maxLength={10} /></Form.Item>
+          <Form.Item name="label" label="Label (e.g. Kilograms)" rules={[{ required: true }]}><Input maxLength={20} /></Form.Item>
         </Form>
       </Modal>
     </div>

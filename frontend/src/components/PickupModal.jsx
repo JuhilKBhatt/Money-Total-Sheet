@@ -6,10 +6,7 @@ import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 const { Text, Title } = Typography;
 
 export default function PickupModal({ visible, onCancel, onSubmit, form, yards, currencies, units, editingId, defaultUnit, metalOptions }) {
-  // Watch the metals array to calculate the live total
   const currentMetals = Form.useWatch('metals', form) || [];
-  
-  // Watch the selected currency so we can display it dynamically (defaults to '$')
   const currentCurrency = Form.useWatch('currency', form) || '$'; 
   
   const liveTripTotal = currentMetals.reduce((sum, metal) => sum + ((metal?.net_weight || 0) * (metal?.price_per_unit || 0)), 0);
@@ -33,7 +30,9 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
           </Form.Item>
         </Space>
         
-        <Form.Item name="notes" label="Notes"><Input.TextArea rows={2} placeholder="Optional notes about this trip..." /></Form.Item>
+        <Form.Item name="notes" label="Notes">
+          <Input.TextArea rows={2} maxLength={1000} showCount placeholder="Optional notes about this trip..." />
+        </Form.Item>
 
         <Text strong>Metal Items:</Text>
         <div style={{ background: '#f9f9f9', padding: '15px', borderRadius: '8px', marginTop: '10px' }}>
@@ -46,6 +45,7 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
                       <AutoComplete
                         options={metalOptions}
                         placeholder="Metal Type (e.g. Copper)"
+                        maxLength={100}
                         filterOption={(inputValue, option) =>
                           option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
                         }
@@ -58,8 +58,9 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
                         <InputNumber 
                           placeholder="Weight" 
                           min={0} 
+                          max={999999999}
                           step={0.001} 
-                          precision={3} /* Forces 3 decimal places */
+                          precision={3}
                           style={{ width: '100%' }}
                           formatter={(value) => {
                             if (!value) return '';
@@ -82,8 +83,9 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
                         addonBefore={currentCurrency} 
                         placeholder="Price per unit" 
                         min={0} 
+                        max={999999999}
                         step={0.01} 
-                        precision={2} /* Forces 2 decimal places */
+                        precision={2}
                         style={{ width: '100%' }}
                         formatter={(value) => {
                           if (!value) return '';
