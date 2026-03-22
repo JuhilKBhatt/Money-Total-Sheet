@@ -58,9 +58,15 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
                         <InputNumber 
                           placeholder="Weight" 
                           min={0} 
-                          step={1} 
+                          step={0.001} 
+                          precision={3} /* Forces 3 decimal places */
                           style={{ width: '100%' }}
-                          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                          formatter={(value) => {
+                            if (!value) return '';
+                            const parts = value.toString().split('.');
+                            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                            return parts.join('.');
+                          }}
                           parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
                         />
                       </Form.Item>
@@ -73,12 +79,18 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
 
                     <Form.Item {...restField} name={[name, 'price_per_unit']}>
                       <InputNumber 
-                        addonBefore={currentCurrency} /* Added dynamic currency block here */
+                        addonBefore={currentCurrency} 
                         placeholder="Price per unit" 
                         min={0} 
                         step={0.01} 
+                        precision={2} /* Forces 2 decimal places */
                         style={{ width: '100%' }}
-                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        formatter={(value) => {
+                          if (!value) return '';
+                          const parts = value.toString().split('.');
+                          parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                          return parts.join('.');
+                        }}
                         parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
                       />
                     </Form.Item>
@@ -92,7 +104,6 @@ export default function PickupModal({ visible, onCancel, onSubmit, form, yards, 
             )}
           </Form.List>
           <div style={{ textAlign: 'right', marginTop: 15 }}>
-            {/* Live total currency now updates dynamically based on the form selection */}
             <Title level={5} style={{ margin: 0 }}>
               Live Total: {currentCurrency}{liveTripTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Title>

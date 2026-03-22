@@ -20,8 +20,14 @@ export default function DeductionModal({ visible, onCancel, onSubmit, form, curr
                  <InputNumber 
                    min={0} 
                    step={0.01} 
+                   precision={2} /* Forces 2 decimal places */
                    style={{ width: '100%' }} 
-                   formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                   formatter={(value) => {
+                     if (!value) return '';
+                     const parts = value.toString().split('.');
+                     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                     return parts.join('.');
+                   }}
                    parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
                  />
                </Form.Item>
