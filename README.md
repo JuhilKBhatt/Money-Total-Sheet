@@ -34,6 +34,8 @@ docker-compose -f docker-compose.prod.yml up --build -d
 
 wait for 10sec
 
+add the xlsx file in ./backend/
+
 docker-compose -f docker-compose.prod.yml exec backend python migrate_excel.py
 ```
 
