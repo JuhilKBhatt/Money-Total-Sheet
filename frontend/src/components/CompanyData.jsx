@@ -54,9 +54,8 @@ export default function CompanyData({ companyId, companyName }) {
     }
   };
 
-  const fetchCompanyData = async () => {
     try {
-      setLoading(true);
+      if (!silentRefresh) setLoading(true);
       const [pickupsRes, deductionsRes] = await Promise.all([
         axios.get(`${API_URL}/companies/${companyId}/pickups/`),
         axios.get(`${API_URL}/companies/${companyId}/deductions/`)
@@ -66,7 +65,7 @@ export default function CompanyData({ companyId, companyName }) {
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (!silentRefresh) setLoading(false);
     }
   };
 
@@ -113,6 +112,9 @@ export default function CompanyData({ companyId, companyName }) {
 
   // --- Handlers ---
   const handlePickupSubmit = async (values) => {
+    const currentScroll = window.scrollY; // Capture scroll position
+    const isNew = !editingId; // Determine if we are adding or editing
+
     try {
       const cleanMetals = (values.metals || [])
         .filter(metal => metal && metal.metal_name)
@@ -150,8 +152,20 @@ export default function CompanyData({ companyId, companyName }) {
 
       setIsPickupModalVisible(false);
       setEditingId(null);
-      fetchCompanyData();
-      fetchOptions(); // Refresh global metal options in case a new metal was added
+      
+      // Wait for data to fetch before scrolling
+      await fetchCompanyData(true); 
+      fetchOptions(); 
+
+      // Wait 300ms for the AntD Modal closing animation to finish and restore the scrollbar, then lock position
+      setTimeout(() => {
+        if (isNew) {
+          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); // Send to bottom for new items
+        } else {
+          window.scrollTo({ top: currentScroll, behavior: 'instant' }); // Lock in place for edits
+        }
+      }, 300);
+
     } catch (error) {
       console.error("Error saving pickup:", error);
       if (error.response && error.response.status === 422) {
@@ -164,6 +178,9 @@ export default function CompanyData({ companyId, companyName }) {
   };
 
   const handleDeductionSubmit = async (values) => {
+    const currentScroll = window.scrollY;
+    const isNew = !editingId;
+
     try {
       let amount = parseFloat(values.amount);
       if (isNaN(amount)) amount = 0.0;
@@ -185,7 +202,17 @@ export default function CompanyData({ companyId, companyName }) {
 
       setIsDeductionModalVisible(false);
       setEditingId(null);
-      fetchCompanyData();
+      
+      await fetchCompanyData(true);
+
+      setTimeout(() => {
+        if (isNew) {
+          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        } else {
+          window.scrollTo({ top: currentScroll, behavior: 'instant' });
+        }
+      }, 300);
+
     } catch (error) {
       console.error("Error saving deduction:", error);
       if (error.response && error.response.status === 422) {
@@ -197,10 +224,12 @@ export default function CompanyData({ companyId, companyName }) {
   };
 
   const handleDeletePickup = async (id) => { 
+    const currentScroll = window.scrollY;
     try {
       await axios.delete(`${API_URL}/pickups/${id}`); 
       message.success("Trip deleted.");
-      fetchCompanyData(); 
+      await fetchCompanyData(true); 
+      setTimeout(() => window.scrollTo({ top: currentScroll, behavior: 'instant' }), 100);
     } catch (error) {
       console.error("Error deleting pickup:", error);
       message.error("Failed to delete trip.");
@@ -208,10 +237,12 @@ export default function CompanyData({ companyId, companyName }) {
   };
 
   const handleDeleteDeduction = async (id) => { 
+    const currentScroll = window.scrollY;
     try {
       await axios.delete(`${API_URL}/deductions/${id}`); 
       message.success("Deduction deleted.");
-      fetchCompanyData(); 
+      await fetchCompanyData(true); 
+      setTimeout(() => window.scrollTo({ top: currentScroll, behavior: 'instant' }), 100);
     } catch (error) {
       console.error("Error deleting deduction:", error);
       message.error("Failed to delete deduction.");
