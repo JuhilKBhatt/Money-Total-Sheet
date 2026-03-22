@@ -32,8 +32,9 @@ docker-compose -f docker-compose.prod.yml down
 
 docker-compose -f docker-compose.prod.yml up --build -d
 
-python manage_db.py --env prod delete
+docker-compose -f docker-compose.prod.yml exec backend python migrate_excel.py
 ```
 
 go to http://localhost:8080
 
+Add Yards, Currencies, Weight Units
