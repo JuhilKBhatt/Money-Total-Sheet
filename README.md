@@ -32,6 +32,8 @@ docker-compose -f docker-compose.prod.yml down
 
 docker-compose -f docker-compose.prod.yml up --build -d
 
+wait for 10sec
+
 docker-compose -f docker-compose.prod.yml exec backend python migrate_excel.py
 ```
 
