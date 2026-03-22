@@ -297,3 +297,7 @@ def update_unit(db: Session, unit_id: int, unit: schemas.UnitOptionCreate):
         db.commit()
         db.refresh(db_unit)
     return db_unit
+
+def get_unique_metal_names(db: Session):
+    names = db.query(models.MetalItem.metal_name).distinct().all()
+    return sorted([name[0] for name in names if name[0]])

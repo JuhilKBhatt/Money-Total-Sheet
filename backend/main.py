@@ -181,3 +181,8 @@ def delete_deduction(deduction_id: int, background_tasks: BackgroundTasks, db: S
         raise HTTPException(status_code=404, detail="Deduction not found")
     background_tasks.add_task(create_on_update_backup)
     return {"detail": "Deduction deleted successfully"}
+
+@app.get("/metals/unique-names", response_model=List[str])
+def read_unique_metal_names(db: Session = Depends(get_db)):
+    """Get all unique metal names globally for text prediction"""
+    return crud.get_unique_metal_names(db)

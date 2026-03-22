@@ -24,9 +24,9 @@ export default function CompanyData({ companyId, companyName }) {
   const [editingId, setEditingId] = useState(null);
   
   const [dateRange, setDateRange] = useState(null);
-  
-  // New state for click-toggle
   const [isPanelExpanded, setIsPanelExpanded] = useState(false);
+
+  const [globalMetalOptions, setGlobalMetalOptions] = useState([]);
 
   const [pickupForm] = Form.useForm();
   const [deductionForm] = Form.useForm();
@@ -38,14 +38,17 @@ export default function CompanyData({ companyId, companyName }) {
 
   const fetchOptions = async () => {
     try {
-      const [yardsRes, currRes, unitsRes] = await Promise.all([
+      const [yardsRes, currRes, unitsRes, metalsRes] = await Promise.all([
         axios.get(`${API_URL}/yards/`),
         axios.get(`${API_URL}/currencies/`),
-        axios.get(`${API_URL}/units/`)
+        axios.get(`${API_URL}/units/`),
+        axios.get(`${API_URL}/metals/unique-names`) // Fetch global metal names
       ]);
       setYards(yardsRes.data);
       setCurrencies(currRes.data);
       setUnits(unitsRes.data);
+      // Format array of strings into Ant Design AutoComplete option objects
+      setGlobalMetalOptions(metalsRes.data.map(name => ({ value: name })));
     } catch (error) {
       console.error("Failed to load options");
     }
@@ -148,6 +151,7 @@ export default function CompanyData({ companyId, companyName }) {
       setIsPickupModalVisible(false);
       setEditingId(null);
       fetchCompanyData();
+      fetchOptions(); // Refresh global metal options in case a new metal was added
     } catch (error) {
       console.error("Error saving pickup:", error);
       if (error.response && error.response.status === 422) {
@@ -336,11 +340,6 @@ export default function CompanyData({ companyId, companyName }) {
     grandTotals[c] -= (deduction.amount || 0);
   });
 
-  // Extract unique metal names for the autocomplete feature
-  const metalOptions = Array.from(
-    new Set(pickups.flatMap(p => (p.metals || []).map(m => m.metal_name)))
-  ).filter(Boolean).sort().map(name => ({ value: name }));
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
       
@@ -462,7 +461,7 @@ export default function CompanyData({ companyId, companyName }) {
         units={units} 
         editingId={editingId} 
         defaultUnit={defaultUnit} 
-        metalOptions={metalOptions} 
+        metalOptions={globalMetalOptions} 
       />
       
       <DeductionModal 
