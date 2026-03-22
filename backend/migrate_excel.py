@@ -23,6 +23,23 @@ def parse_date(val):
 def migrate_data(file_path: str):
     db: Session = SessionLocal()
     
+    # --- 1. SEED DEFAULT SETTINGS (CURRENCIES & UNITS) ---
+    if not db.query(models.CurrencyOption).filter_by(label="AUD$").first():
+        db.add(models.CurrencyOption(code="AUD", symbol="$", label="AUD$"))
+        db.commit()
+        print("   [+] Seeded default Currency: AUD$")
+        
+    if not db.query(models.UnitOption).filter_by(value="kg").first():
+        db.add(models.UnitOption(value="kg", label="kg"))
+        db.commit()
+        print("   [+] Seeded default Unit: kg")
+        
+    if not db.query(models.UnitOption).filter_by(value="t").first():
+        db.add(models.UnitOption(value="t", label="t"))
+        db.commit()
+        print("   [+] Seeded default Unit: t")
+    # -----------------------------------------------------
+
     print(f"📂 Loading Excel file: {file_path}")
     xls = pd.ExcelFile(file_path)
     
@@ -114,7 +131,7 @@ def migrate_data(file_path: str):
                             date=d_date,
                             amount=amount,
                             notes=notes_str,
-                            currency="$"
+                            currency="AUD$"  # Set default to AUD$
                         )
                         db.add(deduction)
                         db.commit()
@@ -134,7 +151,7 @@ def migrate_data(file_path: str):
                         notes="",
                         deduction=0.0,
                         total_amount=0.0,
-                        currency="$"
+                        currency="AUD$"  # Set default to AUD$
                     )
                     db.add(current_pickup)
                     db.commit()
@@ -160,7 +177,7 @@ def migrate_data(file_path: str):
                         pickup_id=current_pickup.id,
                         metal_name=str(col_metal).strip(),
                         net_weight=net_weight,
-                        weight_unit="kg",
+                        weight_unit="kg", # Already kg, but ensures all legacy matches
                         price_per_unit=price,
                         total=total
                     )
@@ -170,7 +187,7 @@ def migrate_data(file_path: str):
                     # Update pickup running total
                     current_pickup.total_amount += total
                     db.commit()
-                    print(f"       -> Added Metal: {col_metal} ({net_weight}kg @ ${price})")
+                    print(f"       -> Added Metal: {col_metal} ({net_weight}kg @ AUD${price})")
                 except ValueError:
                     print(f"   [!] Failed to parse metal item: {col_metal} / {col_kg} / {col_price}")
                     
