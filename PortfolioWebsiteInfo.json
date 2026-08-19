@@ -1,0 +1,14 @@
+{
+ "title": "Money Total Sheet",
+ "description": "A simple budgeting app to track your expenses and income. It allows users to input their financial transactions and categorize them for better debt management.",
+ "language": ["Python", "React+Vite", "TypeScript", "TailwindCSS"],
+ "liveDemo": "",
+ "images": [
+   ""
+ ],
+ "videoDemo": "",
+ "Priority": 2,
+ "type": "Solo",
+ "version": "Prod",
+ "Visibilty": true
+}
