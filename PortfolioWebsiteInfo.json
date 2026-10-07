@@ -1,15 +1,40 @@
 {
- "title": "Money Total Sheet",
- "description": "A simple budgeting app to track your expenses and income. It allows users to input their financial transactions and categorize them for better debt management.",
- "language": ["Python", "React+Vite", "TypeScript", "TailwindCSS"],
- "liveDemo": "",
- "images": [
-   "https://res.cloudinary.com/dmj4ggkjq/image/upload/v1787104783/Money-Total-Sheet-img-1_ue6dkb.png",
-   "https://res.cloudinary.com/dmj4ggkjq/image/upload/v1787104783/Money-Total-Sheet-img-2_jnbcvf.png"
- ],
- "videoDemo": "",
- "Priority": 2,
- "type": "Solo",
- "version": "Prod",
- "Visibilty": true
+  "title": "Money Total Sheet",
+  "description": "A full-stack financial ledger and transaction management application designed to track company pickups, deductions, and multi-currency balances with automated backups.",
+  "techStack": {
+    "Frontend": [
+      "React",
+      "Vite",
+      "Ant Design",
+      "CSS3"
+    ],
+    "Backend": [
+      "Python",
+      "PostgreSQL"
+    ],
+    "AI": [],
+    "DevSecOps": [
+      "Docker",
+      "GitHub"
+    ],
+    "Test Automation": []
+  },
+  "liveDemo": "",
+  "images": [
+    "https://res.cloudinary.com/dmj4ggkjq/image/upload/v1787104783/Money-Total-Sheet-img-1_ue6dkb.png",
+    "https://res.cloudinary.com/dmj4ggkjq/image/upload/v1787104783/Money-Total-Sheet-img-2_jnbcvf.png"
+  ],
+  "videoDemo": "",
+  "Priority": 2,
+  "category": "Web App",
+  "type": "Solo",
+  "version": "Prod",
+  "versionNumber": "1.2.0",
+  "Highlights": [
+    "Full-stack company ledger tracking scrap metal pickups, itemized weight and unit pricing, and payment deductions",
+    "Automated database backup system utilizing APScheduler with on-update triggers and scheduled pg_dump rotations",
+    "Customizable operational settings for multi-currency symbols, weight measurement units, and scrap yards",
+    "Automated Excel migration pipeline using Pandas to import and normalize historical transaction records"
+  ],
+  "Visibilty": true
 }
