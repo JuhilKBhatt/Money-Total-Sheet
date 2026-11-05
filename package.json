@@ -1,0 +1,13 @@
+{
+  "name": "money-total-sheet",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "./mac-run.command",
+    "start": "node --no-warnings backend/src/server.ts",
+    "compile": "node --check backend/src/accounting.ts && node --check backend/src/database.ts && node --check backend/src/service.ts && node --check backend/src/heartbeat.ts && node --check backend/src/server.ts && node --check backend/src/index.ts",
+    "test": "npm run compile && node --test backend/tests/*.test.ts"
+  }
+}
+

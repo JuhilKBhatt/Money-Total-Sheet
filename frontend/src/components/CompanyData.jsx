@@ -9,7 +9,7 @@ import LedgerTable from './LedgerTable';
 import PickupModal from './PickupModal';
 import DeductionModal from './DeductionModal';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export default function CompanyData({ companyId, companyName }) {
   const [pickups, setPickups] = useState([]);
@@ -34,6 +34,12 @@ export default function CompanyData({ companyId, companyName }) {
   useEffect(() => {
     fetchCompanyData();
     fetchOptions();
+    const handleAuthChange = () => {
+      fetchCompanyData(true);
+      fetchOptions();
+    };
+    window.addEventListener('adm-auth-changed', handleAuthChange);
+    return () => window.removeEventListener('adm-auth-changed', handleAuthChange);
   }, [companyId]);
 
   const fetchOptions = async () => {

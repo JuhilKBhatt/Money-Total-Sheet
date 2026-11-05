@@ -1,0 +1,3546 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Money Total Sheet — Customer Balance Management System</title>
+<link rel="stylesheet" crossorigin href="/assets/app.css">
+<!-- Tailwind CSS CDN with Forms & Container Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81'
+            }
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Scrollbar & Transition Styles -->
+<style data-purpose="custom-scrollbars">
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+<style data-purpose="animations">
+    .modal-backdrop {
+      background-color: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+    }
+    .fade-in {
+      animation: fadeIn 0.2s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans">
+<!-- BEGIN: AuthenticationModal -->
+<div class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4" data-purpose="auth-lock-screen" id="login-modal">
+<div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden transform transition-all p-8">
+<div class="text-center mb-6">
+<div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 mb-4 shadow-sm">
+<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<h2 class="text-2xl font-bold text-slate-900 tracking-tight" id="login-modal-title">Set Up Login Password</h2>
+<p class="text-sm text-slate-500 mt-1" id="login-modal-subtitle">First time setup: create a password and a hint to secure this ledger</p>
+</div>
+<!-- Step 1: First-Time Password & Hint Setup Form -->
+<form autocomplete="off" class="space-y-4" id="setup-password-form" onsubmit="event.preventDefault(); handleSetupPasscode();">
+<div>
+<label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5" for="setup-password-input">Set Password *</label>
+<input autocomplete="new-password" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 text-sm outline-none transition" id="setup-password-input" placeholder="Enter new password" required="" type="password" value="">
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5" for="setup-confirm-password-input">Confirm Password *</label>
+<input autocomplete="new-password" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 text-sm outline-none transition" id="setup-confirm-password-input" placeholder="Confirm new password" required="" type="password" value="">
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5" for="setup-hint-question">Password Hint *</label>
+<input autocomplete="off" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 text-sm outline-none transition" id="setup-hint-question" placeholder="Enter a hint in case you forget your password" required="" type="text" value="">
+</div>
+<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+<div class="flex items-center justify-between mb-2">
+<span class="font-bold text-slate-700 flex items-center gap-1.5">
+<svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+Recovery Codes
+</span>
+<button class="text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer text-xs" id="btn-copy-setup-codes" onclick="copySetupRecoveryCodes()" type="button">Copy All</button>
+</div>
+<p class="text-slate-500 text-[11px] mb-2 leading-relaxed">Save these codes in a safe place. You can use any one of them to recover access if you forget your password.</p>
+<div class="grid grid-cols-2 gap-1.5 font-mono text-[11px] text-center" id="setup-recovery-codes-grid">
+<!-- Rendered dynamically -->
+</div>
+</div>
+<p class="hidden text-xs font-semibold text-rose-600" id="setup-error-msg"></p>
+<button class="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-sm transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 cursor-pointer" type="submit">
+<span>Set Up Password</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</form>
+<!-- Step 2: Login Screen (Enter Password + Hint Button + Forgot Password) -->
+<form autocomplete="off" class="space-y-4 hidden" id="login-form" onsubmit="event.preventDefault(); handleLogin();">
+<div>
+<div class="flex items-center justify-between mb-2">
+<label class="block text-xs font-semibold uppercase tracking-wider text-slate-600" for="password-input">Password</label>
+<div class="flex items-center gap-2">
+<button class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition cursor-pointer" id="login-forgot-btn" onclick="showForgotPasswordForm()" type="button">Forgot Password?</button>
+<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition cursor-pointer" id="login-hint-btn" onclick="togglePasswordHint()" type="button">
+<svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Hint</span>
+</button>
+</div>
+</div>
+<div class="relative">
+<input autocomplete="new-password" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 text-sm tracking-widest outline-none transition" id="password-input" placeholder="Enter password" required="" type="password" value="">
+</div>
+<p class="hidden text-xs font-semibold text-rose-600 mt-1.5" id="login-error-msg">Incorrect password. Try again or click Hint.</p>
+</div>
+<div class="hidden p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900" id="login-hint-box">
+<span class="font-bold">Password Hint:</span> <span class="font-medium" id="login-hint-question-text">—</span>
+</div>
+<button class="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-sm transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 cursor-pointer" type="submit">
+<span>Login</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</form>
+<!-- Step 3: Password Recovery Screen (Using Recovery Code) -->
+<form autocomplete="off" class="space-y-4 hidden" id="recovery-form" onsubmit="event.preventDefault(); handleRecoverPasscode();">
+<div>
+<label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5" for="recovery-code-input">Recovery Code *</label>
+<input autocomplete="off" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 text-sm font-mono tracking-wider outline-none transition" id="recovery-code-input" placeholder="e.g. 8F2A-3C91" required="" type="text" value="">
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5" for="recovery-new-password-input">New Password *</label>
+<input autocomplete="new-password" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 text-sm outline-none transition" id="recovery-new-password-input" placeholder="Enter new password" required="" type="password" value="">
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5" for="recovery-confirm-password-input">Confirm New Password *</label>
+<input autocomplete="new-password" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 text-sm outline-none transition" id="recovery-confirm-password-input" placeholder="Confirm new password" required="" type="password" value="">
+</div>
+<p class="hidden text-xs font-semibold text-rose-600" id="recovery-error-msg"></p>
+<button class="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-sm transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 cursor-pointer" type="submit">
+<span>Reset Password</span>
+</button>
+<div class="text-center pt-1">
+<button class="text-xs font-semibold text-slate-500 hover:text-slate-700 cursor-pointer" onclick="showLoginForm()" type="button">← Back to Login</button>
+</div>
+</form>
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+<span class="">Protected Terminal</span>
+<span class="">Version 2.5.0</span>
+</div>
+</div>
+</div>
+<!-- END: AuthenticationModal -->
+<!-- BEGIN: MoneyTotalSheetApp -->
+<div id="root"></div>
+<script type="module" crossorigin src="/assets/app.js"></script>
+<!-- END: MoneyTotalSheetApp -->
+<div id="adm-legacy-shell" class="hidden">
+<!-- BEGIN: ApplicationHeader -->
+<header class="bg-white border-b border-slate-200 sticky top-0 z-30" data-purpose="main-navigation">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex items-center justify-between h-16">
+<!-- Left: Logo & Branding -->
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-2">
+<h1 class="text-lg font-bold text-slate-900 tracking-tight leading-tight">Customer Balance</h1>
+</div>
+<p class="text-xs text-slate-500">Accounts Dues Terminal</p>
+</div>
+</div>
+<!-- Center: Quick View Navigation Tabs -->
+<nav class="hidden md:flex items-center space-x-1 p-1 bg-slate-100 rounded-xl border border-slate-200" data-purpose="view-tabs">
+<button class="px-4 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition bg-white text-indigo-700 shadow-sm" id="nav-tab-directory" onclick="switchView('directory')">
+  Customer Directory
+</button>
+<button class="px-4 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition text-slate-600 hover:text-slate-900" id="nav-tab-sheet" onclick="switchView('sheet')">
+  View Balance Sheet
+</button>
+</nav>
+<!-- Right: Actions & Settings Gear -->
+<div class="flex items-center gap-2 sm:gap-3">
+<!-- Database Traffic Indicator with Toggle -->
+<div class="cursor-pointer flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition shadow-xs select-none" data-busy="false" id="db-traffic-indicator" onclick="toggleDbTraffic()" title="Database: Idle / Connected (Click to simulate traffic)">
+<span class="text-xs font-medium text-slate-500">DB:</span>
+<span class="relative flex h-2.5 w-2.5 items-center justify-center">
+<span class="hidden" id="db-traffic-ping"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs" id="db-traffic-dot"></span>
+</span>
+<span class="text-[11px] font-semibold text-emerald-700" id="db-traffic-status">Idle</span>
+</div>
+<!-- Add Customer Quick Button -->
+<button class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition shadow-sm" data-purpose="add-customer-trigger" onclick="openAddCustomerModal()">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+  Add Customer
+</button>
+<!-- Settings Button (Gear icon) -->
+<button class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition focus:outline-none focus:ring-2 focus:ring-indigo-500" data-purpose="settings-trigger" onclick="openSettingsDrawer()" title="System Settings">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<!-- Lock Button -->
+<button class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition" onclick="lockSystem()" title="Lock Ledger">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+</div>
+</header>
+<!-- END: ApplicationHeader -->
+<!-- BEGIN: MainContent -->
+<main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+<!-- VIEW 1: Customer Directory & Overview -->
+<div class="fade-in space-y-6" id="view-directory">
+<!-- Search bar & Main actions -->
+<section class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm" data-purpose="customer-controls">
+<div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+<div class="relative flex-1 max-w-xl">
+<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<input class="block w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" id="customer-search-input" oninput="filterCustomersTable()" placeholder="Search customer by name, yard, phone or ID..." type="text">
+</div>
+<div class="flex items-center gap-2">
+<button class="px-4 py-2.5 bg-white border border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-2" onclick="switchView('sheet')">
+<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+  View Balance Sheet
+</button>
+</div>
+</div>
+</section>
+<!-- Customer Directory Table -->
+<section class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm" data-purpose="customer-table-container">
+<div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+<div>
+<h3 class="font-bold text-slate-900 text-base">Customer Account Directory</h3>
+<p class="text-xs text-slate-500">Click any customer row to view their ledger, add unpaid totals, or record cash paid to them</p>
+</div>
+<span class="text-xs font-medium text-slate-400" id="customer-count-indicator">Showing 6 of 6 accounts</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse text-sm">
+<thead>
+<tr class="bg-slate-50/75 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
+<th class="py-3 px-6">Customer Name</th>
+<th class="py-3 px-6">Default Yard</th>
+<th class="py-3 px-6 text-right">Current Balance</th>
+<th class="py-3 px-6">Date Last Update</th>
+<th class="py-3 px-6 text-center">Payment Status</th>
+<th class="py-3 px-6 text-right">Ledger Action</th>
+</tr>
+</thead>
+<tbody class="bg-slate-50/75 border-b border-slate-200" id="customer-table-add-row"><tr><td class="py-3.5 px-6" colspan="6"><div class="flex items-center gap-3"><div class="flex-1 grid grid-cols-1 sm:grid-cols-4 gap-2"><input class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="quick-add-cust-name" placeholder="+ Customer / Company Name..." type="text"><select class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="quick-add-cust-yard"><option value="North Yard">North Yard</option><option value="East Yard">East Yard</option><option value="Pier 9 Depot">Pier 9 Depot</option><option value="West Yard">West Yard</option></select><input class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="quick-add-cust-bal" placeholder="Total to Pay (+We Owe / -Advance)" step="0.01" type="number"><input class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="quick-add-cust-phone" placeholder="Notes (optional)" type="text"></div><button class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition flex items-center gap-1.5 whitespace-nowrap" onclick="addInlineCustomer()"><span class="">+ Add Row</span></button></div></td></tr></tbody><tbody class="divide-y divide-slate-100 font-normal" id="customer-table-body"></tbody>
+
+</table>
+</div>
+</section>
+</div>
+<!-- END VIEW 1 -->
+<!-- VIEW 2: Detailed Customer Ledger Sheet -->
+<div class="fade-in space-y-6 hidden" id="view-ledger">
+<!-- Ledger Header & Back Bar -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+<div class="flex items-center gap-3">
+<button class="p-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-600 transition flex items-center justify-center" onclick="switchView('directory')" title="Back to Customer Directory">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<div>
+<div class="flex items-center gap-3">
+<h2 class="text-2xl font-bold text-slate-900 tracking-tight" id="ledger-customer-name">—</h2>
+<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700" id="ledger-customer-status">No account selected</span>
+<span class="hidden" id="ledger-customer-id">—</span>
+<span class="hidden" id="ledger-customer-yard">—</span>
+</div>
+</div>
+</div>
+<!-- Highlighted Balance Card -->
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+<div class="p-3.5 rounded-xl border bg-slate-50 border-slate-200" id="ledger-balance-card-container">
+<div class="text-right">
+<div class="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center justify-end gap-1" id="ledger-balance-label"><span class="">Balance</span></div>
+<div class="text-2xl sm:text-3xl font-black text-slate-700 font-sans tracking-tight" id="ledger-balance-left">$0.00</div>
+</div>
+</div>
+
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-2">
+<button id="ledger-edit-account-btn" onclick="openEditCustomerModal(appData.activeCustomerId)" class="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs cursor-pointer" title="Edit customer account details"><svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg><span class="">Edit Customer</span></button>
+<button id="ledger-delete-account-btn" onclick="confirmDeleteCustomer(appData.activeCustomerId)" class="px-3.5 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs cursor-pointer" title="Delete this customer account"><svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg><span class="">Delete Account</span></button>
+</div>
+<button id="btn-consolidate-ledger" onclick="openConsolidateLedgerModal()" class="px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs cursor-pointer whitespace-nowrap" title="Remove past transaction logs and make current balance opening balance" type="button"><svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg><span>Remove past logs and make this balance</span></button>
+</div>
+</div>
+</div>
+<!-- Ledger Entries Detailed Table -->
+<section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+<div class="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+<div>
+<h3 class="font-bold text-slate-900 text-base">Customer Payout &amp; Unpaid Balance History</h3>
+<p class="text-xs text-slate-500">Unpaid totals (+) increase how much we need to pay the customer; Cash paid (-) reduces the balance we owe them</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-slate-500">Filter Yard:</span>
+<select class="text-xs py-1.5 px-3 border border-slate-300 rounded-lg bg-white focus:ring-indigo-500 focus:border-indigo-500" id="ledger-yard-filter" onchange="renderActiveCustomerLedger()">
+<option value="ALL">All Yards</option>
+<option value="North Yard">North Yard</option>
+<option value="East Yard">East Yard</option>
+<option value="Pier 9 Depot">Pier 9 Depot</option>
+<option value="West Yard">West Yard</option>
+</select>
+<button class="p-1.5 border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-600" onclick="printLedgerSheet()" title="Print Ledger">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse text-sm">
+<thead>
+<tr class="bg-slate-50/75 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
+<th class="py-3 px-6">Entry Date</th>
+<th class="py-3 px-6">Unpaid Total Added (+)</th>
+<th class="py-3 px-6">Paid to Customer (-)</th>
+<th class="py-3 px-6">Method</th>
+<th class="py-3 px-6">Yard Location</th>
+<th class="py-3 px-6">Notes / Memo</th>
+<th class="py-3 px-6 text-right">Balance After</th>
+<th class="py-3 px-6 text-center no-print">Actions</th>
+</tr>
+</thead>
+<tbody class="bg-slate-50/75 border-b border-slate-200" id="ledger-table-add-row"><tr><td class="py-3.5 px-6" colspan="8"><div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3"><div class="flex-1 grid grid-cols-1 sm:grid-cols-7 gap-2"><input class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="inline-entry-date" type="date"><select class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none font-semibold" id="inline-entry-currency" onchange="updateCurrencyPlaceholders()" title="Currency"><option value="USD ($)">USD ($)</option></select><input class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="inline-entry-inv" min="0" placeholder="+ Unpaid Total" step="0.01" type="number"><input class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="inline-entry-paid" min="0" placeholder="- Paid to Customer" step="0.01" type="number"><select class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="inline-entry-method"><option value="Cash">Cash</option><option value="Bank Account">Bank Account</option></select><select class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="inline-entry-yard"><option value="North Yard">North Yard</option><option value="East Yard">East Yard</option><option value="Pier 9 Depot">Pier 9 Depot</option><option value="West Yard">West Yard</option></select><input class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="inline-entry-memo" placeholder="Notes / Memo" type="text"></div><div class="flex items-center gap-2"><button class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer" onclick="addInlineLedgerEntry()" type="button"><span>+ Add Row</span></button><button class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer" id="btn-pay-full-balance" onclick="payFullCustomerBalance()" title="Pay full remaining balance owed to this customer" type="button"><span>Pay Everything</span></button></div></div></td></tr></tbody>
+<tbody class="divide-y divide-slate-100 font-normal" id="ledger-entries-tbody"></tbody>
+
+</table>
+</div>
+</section>
+</div>
+<!-- END VIEW 2 -->
+<!-- VIEW 3: Global Balance Sheet Ledger (DEFAULT ACTIVE VIEW) -->
+<div class="fade-in space-y-6 hidden" id="view-all-sheets">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+<div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center justify-center p-1.5 bg-indigo-50 text-indigo-700 rounded-lg">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</span>
+<h2 class="text-2xl font-bold text-slate-900 tracking-tight">Consolidated Balance Sheet</h2>
+</div>
+</div>
+</div>
+<!-- Financial Metrics Row (Explicit Business Model) -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="sheet-metrics-row">
+<!-- Metric 1: Total to Pay Customers (We Owe) -->
+<div class="bg-white p-5 rounded-2xl border border-rose-200 bg-gradient-to-br from-white to-rose-50/30 shadow-sm relative overflow-hidden flex flex-col justify-between">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-rose-500"></span>
+<span class="text-xs font-bold uppercase tracking-wider text-rose-800">Total to Pay Customers (We Owe)</span>
+</div>
+<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-700 border border-rose-200">Unpaid Dues</span>
+</div>
+<div class="flex items-baseline justify-between mt-1">
+<span class="text-2xl sm:text-3xl font-black text-rose-600 font-sans tracking-tight" id="sheet-metric-owing">+$34,840.50</span>
+<span class="text-xs text-rose-700 font-medium" id="sheet-metric-owing-count">4 customers to pay</span>
+</div>
+</div>
+<!-- Metric 2: Advance Given / Overpaid -->
+<div class="bg-white p-5 rounded-2xl border border-amber-200 bg-gradient-to-br from-white to-amber-50/30 shadow-sm relative overflow-hidden flex flex-col justify-between">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="text-xs font-bold uppercase tracking-wider text-amber-900">Advance Given / Overpaid</span>
+</div>
+<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">Advance Paid</span>
+</div>
+<div class="flex items-baseline justify-between mt-1">
+<span class="text-2xl sm:text-3xl font-black text-amber-600 font-sans tracking-tight" id="sheet-metric-advance">-$4,600.00</span>
+<span class="text-xs text-amber-700 font-medium" id="sheet-metric-advance-count">1 accounts in advance</span>
+</div>
+</div>
+<!-- Metric 3: Net Balance / Net Due Position -->
+<div class="bg-white p-5 rounded-2xl border border-indigo-200 bg-gradient-to-br from-white to-indigo-50/30 shadow-sm relative overflow-hidden flex flex-col justify-between">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+<span class="text-xs font-bold uppercase tracking-wider text-indigo-900">Net Balance to Pay (We Owe - Advances)</span>
+</div>
+<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">Net Payable</span>
+</div>
+<div class="flex items-baseline justify-between mt-1">
+<span class="text-2xl sm:text-3xl font-black text-indigo-700 font-sans tracking-tight" id="sheet-metric-net">+$30,240.50</span>
+<span class="text-xs text-indigo-600 font-medium" id="sheet-metric-settled-count">1 settled ($0)</span>
+</div>
+</div>
+</div>
+<!-- Interactive Filter Toolbar -->
+<section class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4" id="balance-sheet-filter-bar">
+<div class="flex flex-wrap items-center justify-between gap-3">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+<h3 class="text-xs font-bold uppercase tracking-wider text-slate-800">Balance Sheet Filters &amp; Drill-down</h3>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs font-semibold transition shadow-xs flex items-center gap-1.5" onclick="resetSheetFilters()" type="button">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        Reset Filters
+      </button>
+</div>
+</div>
+<!-- Dropdown & Input Controls -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+<!-- Yard Filter -->
+<div>
+<label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1" for="sheet-yard-select">Operating Yard</label>
+<select class="w-full text-xs py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="sheet-yard-select" onchange="applySheetFilters()">
+<option value="ALL">All Yards</option>
+<option value="North Yard">North Yard</option>
+<option value="East Yard">East Yard</option>
+<option value="Pier 9 Depot">Pier 9 Depot</option>
+<option value="West Yard">West Yard</option>
+</select>
+</div>
+<!-- Balance Type Filter -->
+<div>
+<label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1" for="sheet-type-select">Balance Classification</label>
+<select class="w-full text-xs py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="sheet-type-select" onchange="applySheetFilters()">
+<option value="ALL">All Accounts (All Types)</option>
+<option value="OWING">We Owe Customer (+) [To Pay]</option>
+<option value="ADVANCE">Advance Given (-) [Overpaid]</option>
+<option value="SETTLED">Settled ($0.00)</option>
+</select>
+</div>
+<!-- Quick Search Input -->
+<div>
+<label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1" for="sheet-search-filter">Search Customer or Notes</label>
+<input class="w-full text-xs py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="sheet-search-filter" oninput="applySheetFilters()" placeholder="Type customer name or notes..." type="text">
+</div>
+<!-- Balance Range ($) -->
+<div>
+<label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Balance Threshold</label>
+<select class="w-full text-xs py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="sheet-amount-preset" onchange="applySheetFilters()">
+<option value="ALL">Any Amount</option>
+<option value="GT5000">Greater than $5,000</option>
+<option value="GT10000">Greater than $10,000</option>
+<option value="NEGATIVE">Negative balances only</option>
+</select>
+</div>
+</div>
+<!-- Quick Status Filter Pills -->
+<div class="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2">
+<span class="text-xs font-semibold text-slate-500 mr-1">Quick Select:</span>
+<button class="sheet-pill px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 text-white shadow-xs" id="pill-all" onclick="setQuickPillFilter('ALL')" type="button">All Accounts</button>
+<button class="sheet-pill px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200" id="pill-owing" onclick="setQuickPillFilter('OWING')" type="button">We Owe Customer (+)</button>
+<button class="sheet-pill px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200" id="pill-advance" onclick="setQuickPillFilter('ADVANCE')" type="button">Advance Given (-)</button>
+<button class="sheet-pill px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200" id="pill-settled" onclick="setQuickPillFilter('SETTLED')" type="button">Settled ($0)</button>
+</div>
+</section>
+<!-- Consolidated Balance Sheet Table -->
+<div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+<div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+<div>
+<h3 class="font-bold text-slate-900 text-base">Customer Balances &amp; Payout Ledger</h3>
+<p class="text-xs text-slate-500">Positive (+) means we need to pay the customer. Minus (-) means advance cash was given to the customer.</p>
+</div>
+<span class="text-xs font-medium text-slate-400" id="sheet-filtered-count">Showing 6 of 6 accounts</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse text-sm">
+<thead>
+<tr class="bg-slate-50/75 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
+<th class="py-3 px-6">Customer Name</th>
+<th class="py-3 px-6">Yard</th>
+<th class="py-3 px-6 text-right">Total Unpaid Recorded (+)</th>
+<th class="py-3 px-6 text-right">Total Paid to Customer (-)</th>
+<th class="py-3 px-6 text-right">Current Balance</th>
+<th class="py-3 px-6 text-center">Status / Indicator</th>
+<th class="py-3 px-6 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100" id="all-sheets-tbody"></tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- END VIEW 3 -->
+</main>
+<!-- END: MainContent -->
+</div>
+<!-- BEGIN: SettingsSlideOverDrawer -->
+<aside aria-labelledby="slide-over-title" aria-modal="true" class="fixed inset-0 z-50 overflow-hidden hidden" id="settings-drawer" role="dialog">
+<div class="absolute inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity" onclick="closeSettingsDrawer()"></div>
+<div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
+<div class="w-screen max-w-md bg-white shadow-2xl border-l border-slate-200 flex flex-col">
+<!-- Drawer Header with Back Button -->
+<div class="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+<div class="flex items-center gap-3">
+<button class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1 transition shadow-xs" onclick="closeSettingsDrawer()">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="">Back</span>
+</button>
+<h2 class="text-lg font-bold text-slate-900 tracking-tight">System Settings</h2>
+</div>
+<button class="text-slate-400 hover:text-slate-600" onclick="closeSettingsDrawer()">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+<!-- Drawer Content Sections -->
+<div class="flex-1 overflow-y-auto p-6 space-y-8">
+<!-- SECTION 1: Currency Management -->
+<div class="space-y-3" data-purpose="settings-currency">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">Currency</h3>
+</div>
+<button class="text-xs text-indigo-600 font-semibold cursor-pointer hover:underline" onclick="promptAddCurrency()" type="button">+ Add New Currency</button>
+</div>
+<div class="hidden p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-2.5" id="inline-add-currency-bar">
+<div class="text-xs font-bold text-slate-700">Add New Currency</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+<div>
+<label class="block text-[11px] font-semibold text-slate-600 mb-0.5" for="inline-new-currency-code">Short Name</label>
+<input class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 uppercase" id="inline-new-currency-code" maxlength="8" placeholder="e.g. USD, EUR, AFN" type="text">
+</div>
+<div>
+<label class="block text-[11px] font-semibold text-slate-600 mb-0.5" for="inline-new-currency-symbol">Symbol</label>
+<input class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" id="inline-new-currency-symbol" maxlength="8" placeholder="e.g. $, €, ؋" type="text">
+</div>
+</div>
+<div class="flex items-center justify-end gap-2 pt-1">
+<button class="px-3 py-1.5 text-slate-500 hover:text-slate-700 text-xs font-medium cursor-pointer" onclick="cancelInlineAddCurrency()" type="button">Cancel</button>
+<button class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg cursor-pointer" onclick="submitInlineAddCurrency()" type="button">Save Currency</button>
+</div>
+</div>
+<div class="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2" id="currencies-list-container">
+</div>
+<p class="text-[11px] text-slate-400">Manage base monetary symbol used for customer balance calculations.</p>
+</div>
+<!-- SECTION 2: Database Operations -->
+<div class="space-y-3" data-purpose="settings-database">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">Database Tools</h3>
+</div>
+<div class="grid grid-cols-1 gap-2.5">
+<button class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition group" onclick="simulateDbAction('load-sql')">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-mono text-xs font-bold">SQL</div>
+<div>
+<div class="text-xs font-bold text-slate-800">Load SQL File</div>
+<div class="text-[11px] text-slate-500">Restore or execute dump script</div>
+</div>
+</div>
+<span class="text-xs font-semibold text-indigo-600 group-hover:translate-x-0.5 transition">Select File →</span>
+</button>
+<button class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition group cursor-pointer" onclick="simulateDbAction('load-xlsx')">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-mono text-xs font-bold">CSV</div>
+<div>
+<div class="text-xs font-bold text-slate-800">Load from .csv / .xlsx File</div>
+<div class="text-[11px] text-slate-500">Import customers &amp; balances via CSV or Excel</div>
+</div>
+</div>
+<span class="text-xs font-semibold text-emerald-600 group-hover:translate-x-0.5 transition">Import →</span>
+</button>
+<button class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition group" onclick="simulateDbAction('download-db')">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-mono text-xs font-bold">BAK</div>
+<div>
+<div class="text-xs font-bold text-slate-800">Download Database</div>
+<div class="text-[11px] text-slate-500">Save full offline archive backup</div>
+</div>
+</div>
+<span class="text-xs font-semibold text-amber-600 group-hover:translate-x-0.5 transition">Download ↓</span>
+</button>
+<button class="flex items-center justify-between p-3 rounded-xl border border-rose-200 bg-rose-50/30 hover:bg-rose-50 text-left transition group cursor-pointer" onclick="simulateDbAction('delete-db')" type="button">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center font-mono text-xs font-bold">DEL</div>
+<div>
+<div class="text-xs font-bold text-rose-800">Delete Database</div>
+<div class="text-[11px] text-rose-600/80">Permanently wipe all customer &amp; ledger records</div>
+</div>
+</div>
+<span class="text-xs font-semibold text-rose-600 group-hover:translate-x-0.5 transition">Delete ×</span>
+</button>
+<div class="hidden p-3 rounded-xl border border-rose-300 bg-rose-50 space-y-2" id="inline-delete-db-box">
+<label class="block text-xs font-semibold text-rose-800" for="inline-delete-db-input">Type <span class="font-mono font-bold">"delete"</span> to wipe all records:</label>
+<div class="flex items-center gap-2">
+<input class="flex-1 px-2.5 py-1.5 bg-white border border-rose-300 rounded-lg text-xs text-slate-800 outline-none focus:ring-2 focus:ring-rose-500" id="inline-delete-db-input" placeholder="delete" type="text">
+<button class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg cursor-pointer" onclick="executeInlineDeleteDb()" type="button">Confirm</button>
+<button class="px-2 py-1.5 text-slate-500 hover:text-slate-700 text-xs font-medium cursor-pointer" onclick="document.getElementById('inline-delete-db-box').classList.add('hidden')" type="button">Cancel</button>
+</div>
+</div>
+</div>
+</div>
+<!-- SECTION 3: Yard Locations Management -->
+<div class="space-y-3" data-purpose="settings-yard">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">Yard Locations</h3>
+</div>
+<button class="text-xs text-indigo-600 font-semibold cursor-pointer hover:underline" onclick="promptAddYard()" type="button">+ Add New Yard</button>
+</div>
+<div class="hidden flex items-center gap-2 p-2 bg-amber-50/60 border border-amber-200 rounded-xl" id="inline-add-yard-bar">
+<input class="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" id="inline-new-yard-input" placeholder="New yard location name..." type="text">
+<button class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg cursor-pointer" onclick="submitInlineAddYard()" type="button">Add</button>
+<button class="px-2 py-1.5 text-slate-500 hover:text-slate-700 text-xs font-medium cursor-pointer" onclick="cancelInlineAddYard()" type="button">Cancel</button>
+</div>
+<div class="space-y-2" id="yards-list-container"></div>
+<p class="text-[11px] text-slate-400">Configure weighing points, recycling facilities, and loading yards.</p>
+</div>
+<!-- SECTION 4: Language Selector -->
+<div class="space-y-3 pt-2 border-t border-slate-100" data-purpose="settings-language">
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700" for="system-language">Display Language</label>
+<div class="relative">
+<select class="w-full text-xs font-medium py-2.5 px-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500" id="system-language" onchange="notifyLanguageChange()">
+<option selected="" value="en">English</option>
+</select>
+</div>
+</div>
+<!-- SECTION 5: Security / Reset Password -->
+<div class="space-y-3 pt-2 border-t border-slate-100" data-purpose="settings-security">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">Security</h3>
+</div>
+<button class="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition group cursor-pointer" id="settings-reset-password-btn" onclick="resetPasswordFromSettings()" type="button">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-mono text-xs font-bold">KEY</div>
+<div>
+<div class="text-xs font-bold text-slate-800">Reset Password</div>
+<div class="text-[11px] text-slate-500">Set up a new login password &amp; hint</div>
+</div>
+</div>
+<span class="text-xs font-semibold text-indigo-600 group-hover:translate-x-0.5 transition">Reset →</span>
+</button>
+</div>
+</div>
+<!-- Drawer Footer -->
+<div class="p-4 bg-slate-50 border-t border-slate-200 text-center">
+<p class="text-[11px] text-slate-400 font-medium" id="app-version-footer">Version 2.5.0</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- END: SettingsSlideOverDrawer -->
+<!-- BEGIN: AddCustomerModal -->
+<div class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden" data-purpose="modal-add-customer" id="modal-add-customer">
+<div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
+<div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+<h3 class="font-bold text-slate-900 text-base">Add New Customer Account</h3>
+<button class="text-slate-400 hover:text-slate-600 text-lg font-bold" onclick="closeAddCustomerModal()">×</button>
+</div>
+<form class="p-6 space-y-4" id="form-add-customer" onsubmit="event.preventDefault(); submitNewCustomer();">
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="input-customer-name">Company / Customer Name *</label>
+<input class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500 focus:border-indigo-500" id="input-customer-name" placeholder="e.g. Apex Metals Ltd." required="" type="text">
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="input-customer-balance">Total to Pay Customer</label>
+<input class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500 focus:border-indigo-500" id="input-customer-balance" placeholder="+ To Pay / - Advance" step="0.01" type="number" value="0.00">
+<span class="text-[11px] text-slate-400">Enter total we need to pay customer (use - if advance given)</span>
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="input-customer-yard">Assigned Yard</label>
+<select class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500 focus:border-indigo-500" id="input-customer-yard">
+<option value="North Yard">North Yard</option>
+<option value="East Yard">East Yard</option>
+<option value="Pier 9 Depot">Pier 9 Depot</option>
+<option value="West Yard">West Yard</option>
+</select>
+</div>
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="input-customer-contact">Notes (Optional)</label>
+<input class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500 focus:border-indigo-500" id="input-customer-contact" placeholder="Optional customer notes" type="text">
+</div>
+<div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+<button class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800" onclick="closeAddCustomerModal()" type="button">Cancel</button>
+<button class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-sm transition" type="submit">Create Customer Account</button>
+</div>
+</form>
+</div>
+</div>
+<!-- END: AddCustomerModal -->
+<!-- BEGIN: RecordPaymentModal -->
+<div class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden" data-purpose="modal-record-payment" id="modal-record-payment">
+<div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
+<div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+<div>
+<h3 class="font-bold text-slate-900 text-base">Record Ledger Entry</h3>
+<p class="text-xs text-slate-500" id="payment-modal-subtitle">Apex Metals Ltd. (CUST-1001)</p>
+</div>
+<button class="text-slate-400 hover:text-slate-600 text-lg font-bold" onclick="closeRecordPaymentModal()">×</button>
+</div>
+<form class="p-6 space-y-4" id="form-record-payment" onsubmit="event.preventDefault(); submitLedgerEntry();">
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="input-entry-type">Entry Type</label>
+<select class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:ring-indigo-500" id="input-entry-type">
+<option value="payment">Cash Paid (Pays Customer)</option>
+<option value="advance">Advance Given (-)</option>
+<option value="invoice">Unpaid Amount (+)</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="input-entry-currency">Currency</label>
+<select class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-indigo-500" id="input-entry-currency" onchange="updateCurrencyPlaceholders()">
+<option value="USD ($)">USD ($)</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="input-entry-amount" id="label-entry-amount">Amount *</label>
+<input class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:ring-indigo-500" id="input-entry-amount" min="0.01" placeholder="0.00" required="" step="0.01" type="number">
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="input-entry-method">Payment Method</label>
+<select class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500" id="input-entry-method">
+<option value="Cash">Cash</option>
+<option value="Bank Account">Bank Account</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="input-entry-yard">Operating Yard</label>
+<select class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500" id="input-entry-yard">
+<option value="North Yard">North Yard</option>
+<option value="East Yard">East Yard</option>
+<option value="Pier 9 Depot">Pier 9 Depot</option>
+<option value="West Yard">West Yard</option>
+</select>
+</div>
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="input-entry-memo">Notes / Reference</label>
+<input class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500" id="input-entry-memo" placeholder="e.g. Paid part of balance or recorded unpaid total when cash unavailable" type="text">
+</div>
+<div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+<button class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800" onclick="closeRecordPaymentModal()" type="button">Cancel</button>
+<button class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-sm transition" type="submit">Post to Ledger</button>
+</div>
+</form>
+</div>
+</div><div class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden" data-purpose="modal-delete-customer" id="modal-delete-customer"><div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden"><div class="p-6 text-center"><div class="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 mx-auto flex items-center justify-center mb-4 shadow-sm"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></div><h3 class="text-lg font-bold text-slate-900 tracking-tight">Delete Customer Account</h3><p class="text-xs text-slate-500 mt-2" id="delete-customer-prompt-text">Type "delete" below to permanently delete this customer account and all associated ledger records.</p><div class="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs"><div class="flex justify-between py-1"><span class="text-slate-500">Customer Name:</span><span class="font-bold text-slate-800" id="delete-confirm-cust-name">—</span></div><div class="flex justify-between py-1"><span class="text-slate-500">Account ID:</span><span class="font-mono font-semibold text-slate-700" id="delete-confirm-cust-id">—</span></div><div class="flex justify-between py-1"><span class="text-slate-500">Current Balance:</span><span class="font-bold text-slate-700" id="delete-confirm-cust-bal">$0.00</span></div></div><div class="mt-4 text-left"><label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="delete-customer-confirm-input">Type "delete" to confirm</label><input autocomplete="off" class="w-full px-3.5 py-2 border border-rose-300 rounded-xl text-sm focus:ring-2 focus:ring-rose-500 outline-none" id="delete-customer-confirm-input" placeholder="delete" type="text"></div></div><div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3"><button onclick="closeDeleteCustomerModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 transition" type="button">Cancel</button><button id="btn-confirm-delete-action" onclick="executeDeleteCustomer()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5" type="button"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg><span class="">Confirm Delete</span></button></div></div></div>
+<div class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden" data-purpose="modal-edit-customer" id="modal-edit-customer">
+  <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div>
+        <h3 class="font-bold text-slate-900 text-base">Edit Customer Account</h3>
+        <p class="text-xs text-slate-500" id="edit-customer-subtitle">Update customer details</p>
+      </div>
+      <button class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer" onclick="closeEditCustomerModal()" type="button">×</button>
+    </div>
+    <form class="p-6 space-y-4" id="form-edit-customer" onsubmit="event.preventDefault(); submitEditCustomer();">
+      <input type="hidden" id="edit-customer-id">
+      <div>
+        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="edit-customer-name">Customer / Company Name *</label>
+        <input class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500" id="edit-customer-name" required type="text">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="edit-customer-yard">Default Operating Yard</label>
+        <select class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500" id="edit-customer-yard">
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="edit-customer-notes">Notes / Reference (Optional)</label>
+        <input class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500" id="edit-customer-notes" type="text" placeholder="Customer notes or phone number">
+      </div>
+      <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+        <button class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 cursor-pointer" onclick="closeEditCustomerModal()" type="button">Cancel</button>
+        <button class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-sm transition cursor-pointer" type="submit">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden" data-purpose="modal-edit-ledger-entry" id="modal-edit-ledger-entry">
+  <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div>
+        <h3 class="font-bold text-slate-900 text-base">Edit Ledger Entry</h3>
+        <p class="text-xs text-slate-500" id="edit-ledger-entry-subtitle">Modify transaction record</p>
+      </div>
+      <button class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer" onclick="closeEditLedgerEntryModal()" type="button">×</button>
+    </div>
+    <form class="p-6 space-y-4" id="form-edit-ledger-entry" onsubmit="event.preventDefault(); submitEditLedgerEntry();">
+      <input type="hidden" id="edit-entry-index">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="edit-entry-date">Date</label>
+          <input class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500" id="edit-entry-date" type="text" placeholder="YYYY-MM-DD HH:MM">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="edit-entry-currency">Currency</label>
+          <select class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm font-semibold focus:ring-indigo-500" id="edit-entry-currency">
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="edit-entry-inv">Unpaid Total Added (+)</label>
+          <input class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm font-bold text-rose-600 focus:ring-indigo-500" id="edit-entry-inv" min="0" step="0.01" type="number" placeholder="0.00">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="edit-entry-paid">Paid to Customer (-)</label>
+          <input class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm font-bold text-emerald-600 focus:ring-indigo-500" id="edit-entry-paid" min="0" step="0.01" type="number" placeholder="0.00">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="edit-entry-method">Payment Method</label>
+          <select class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500" id="edit-entry-method">
+            <option value="Cash">Cash</option>
+            <option value="Bank Account">Bank Account</option>
+            <option value="Unpaid Due">Unpaid Due</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="edit-entry-yard">Operating Yard</label>
+          <select class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500" id="edit-entry-yard">
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="edit-entry-memo">Notes / Memo</label>
+        <input class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500" id="edit-entry-memo" type="text" placeholder="Transaction notes or memo">
+      </div>
+      <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+        <button class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 cursor-pointer" onclick="closeEditLedgerEntryModal()" type="button">Cancel</button>
+        <button class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-sm transition cursor-pointer" type="submit">Update Entry</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden" data-purpose="modal-delete-ledger-entry" id="modal-delete-ledger-entry">
+  <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
+    <div class="p-6 text-center">
+      <div class="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 mx-auto flex items-center justify-center mb-4 shadow-sm">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+      </div>
+      <h3 class="text-lg font-bold text-slate-900 tracking-tight">Delete Ledger Entry</h3>
+      <p class="text-xs text-slate-500 mt-2">Are you sure you want to remove this transaction record? Running balances will be automatically recalculated.</p>
+      <div class="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs space-y-1">
+        <div class="flex justify-between py-0.5"><span class="text-slate-500">Date:</span><span class="font-mono font-semibold text-slate-700" id="delete-entry-preview-date">—</span></div>
+        <div class="flex justify-between py-0.5"><span class="text-slate-500">Type / Amount:</span><span class="font-bold text-slate-800" id="delete-entry-preview-amount">—</span></div>
+        <div class="flex justify-between py-0.5"><span class="text-slate-500">Yard / Method:</span><span class="font-medium text-slate-700" id="delete-entry-preview-yard">—</span></div>
+        <div class="flex justify-between py-0.5"><span class="text-slate-500">Memo:</span><span class="text-slate-600" id="delete-entry-preview-memo">—</span></div>
+      </div>
+    </div>
+    <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+      <button onclick="closeDeleteLedgerEntryModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 transition cursor-pointer" type="button">Cancel</button>
+      <button onclick="executeDeleteLedgerEntry()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer" type="button">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        <span>Confirm Delete</span>
+      </button>
+    </div>
+  </div>
+</div>
+<!-- Consolidate Customer Ledger Modal -->
+<div class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden" data-purpose="modal-consolidate-ledger" id="modal-consolidate-ledger">
+  <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
+    <div class="p-6 text-center">
+      <div class="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 mx-auto flex items-center justify-center mb-4 shadow-sm">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </div>
+      <h3 class="text-lg font-bold text-slate-900 tracking-tight">Consolidate Customer Ledger</h3>
+      <p class="text-xs text-slate-500 mt-2">
+        This will remove all past transaction history for <span class="font-bold text-slate-800" id="consolidate-modal-cust-name">—</span> and preserve their current balance as a single opening entry.
+      </p>
+      <div class="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs space-y-1">
+        <div class="flex justify-between py-0.5"><span class="text-slate-500">Customer:</span><span class="font-bold text-slate-800" id="consolidate-modal-cust-label">—</span></div>
+        <div class="flex justify-between py-0.5"><span class="text-slate-500">Current Balance:</span><span class="font-bold text-slate-800" id="consolidate-modal-cust-balance">$0.00</span></div>
+      </div>
+    </div>
+    <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+      <button onclick="closeConsolidateLedgerModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 transition cursor-pointer" type="button">Cancel</button>
+      <button onclick="executeConsolidateLedger()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer" type="button">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <span>Confirm &amp; Consolidate</span>
+      </button>
+    </div>
+  </div>
+</div>
+<!-- Reset Password Old Password Modal -->
+<div class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4 hidden" data-purpose="modal-reset-password" id="modal-reset-password">
+  <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div>
+        <h3 class="font-bold text-slate-900 text-base">Reset Supervisor Password</h3>
+        <p class="text-xs text-slate-500">Enter your current password to verify identity</p>
+      </div>
+      <button onclick="closeResetPasswordModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer" type="button">×</button>
+    </div>
+    <form class="p-6 space-y-4" onsubmit="event.preventDefault(); submitResetPasswordWithOld();">
+      <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+        Please enter your current supervisor password before setting a new one.
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1" for="reset-passcode-old-input">Current Password *</label>
+        <input autocomplete="current-password" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-indigo-500 outline-none" id="reset-passcode-old-input" placeholder="Enter current password" required type="password">
+        <p class="text-xs text-rose-600 mt-1 hidden" id="reset-passcode-error"></p>
+      </div>
+      <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+        <button onclick="closeResetPasswordModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 cursor-pointer" type="button">Cancel</button>
+        <button class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-sm transition cursor-pointer" type="submit">Verify &amp; Reset</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- END: RecordPaymentModal -->
+<!-- BEGIN: NotificationToast -->
+<div class="fixed bottom-5 right-5 z-50 transition-all duration-300 transform opacity-0 translate-y-2 hidden" id="toast">
+<div class="bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 border border-slate-800" id="toast-container">
+<div id="toast-icon">
+<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<span id="toast-message" class="">Action processed successfully.</span>
+</div>
+</div><div id="delete-action-handlers" style="display: none;" class=""><script>let customerPendingDeletion = null; let recentlyDeletedCustomer = null; window.confirmDeleteCustomer = function(customerId) { const cust = appData.customers.find(c => c.id === customerId); if (!cust) return; customerPendingDeletion = cust; document.getElementById('delete-confirm-cust-name').innerText = cust.name; document.getElementById('delete-confirm-cust-id').innerText = cust.id; document.getElementById('delete-confirm-cust-bal').innerText = formatSignedBalance(cust.balance); const inp = document.getElementById('delete-customer-confirm-input'); if (inp) inp.value = ''; document.getElementById('modal-delete-customer').classList.remove('hidden'); }; window.closeDeleteCustomerModal = function() { document.getElementById('modal-delete-customer').classList.add('hidden'); customerPendingDeletion = null; }; window.executeDeleteCustomer = function() { if (!customerPendingDeletion) return; const inp = document.getElementById('delete-customer-confirm-input'); const typed = inp ? inp.value.trim() : ''; if (typed.toLowerCase() !== 'delete') { showToast('Please type "delete" to confirm account deletion.'); return; } const cust = customerPendingDeletion; recentlyDeletedCustomer = { ...cust }; appData.customers = appData.customers.filter(c => c.id !== cust.id); closeDeleteCustomerModal(); if (appData.customers.length > 0) { appData.activeCustomerId = appData.customers[0].id; } switchView('directory'); showToast(`Account "${cust.name}" deleted successfully.`); renderDashboard(); }; window.undoDeleteCustomer = function() { if (!recentlyDeletedCustomer) return; appData.customers.unshift(recentlyDeletedCustomer); const restoredName = recentlyDeletedCustomer.name; recentlyDeletedCustomer = null; showToast(`Account "${restoredName}" restored.`); renderDashboard(); }; const origRenderCust = window.renderCustomersTable; window.renderCustomersTable = function(q = '') { if (origRenderCust) origRenderCust(q); const tbody = document.getElementById('customer-table-body'); if (!tbody) return; const rows = tbody.querySelectorAll('tr'); rows.forEach(row => { const lastTd = row.querySelector('td:last-child'); if (lastTd && !lastTd.querySelector('[title="Delete Account"]')) { const openBtn = lastTd.querySelector('button'); if (openBtn) { const cidMatch = openBtn.getAttribute('onclick')?.match(/'([^']+)'/); const cid = cidMatch ? cidMatch[1] : ''; const wrap = document.createElement('div'); wrap.className = 'inline-flex items-center gap-1.5'; openBtn.parentNode.insertBefore(wrap, openBtn); wrap.appendChild(openBtn); const delBtn = document.createElement('button'); delBtn.className = 'p-1.5 rounded-lg bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 text-xs font-semibold transition inline-flex items-center shadow-2xs'; delBtn.title = 'Delete Account'; delBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>'; delBtn.onclick = (e) => { e.stopPropagation(); confirmDeleteCustomer(cid); }; wrap.appendChild(delBtn); } } }); }; const origRenderSheets = window.applySheetFilters; window.applySheetFilters = function() { if (origRenderSheets) origRenderSheets(); const tbody = document.getElementById('all-sheets-tbody'); if (!tbody) return; const rows = tbody.querySelectorAll('tr'); rows.forEach(row => { const lastTd = row.querySelector('td:last-child'); if (lastTd && !lastTd.querySelector('[title="Delete Account"]')) { const openBtn = lastTd.querySelector('button'); if (openBtn) { const cidMatch = openBtn.getAttribute('onclick')?.match(/'([^']+)'/); const cid = cidMatch ? cidMatch[1] : ''; const wrap = document.createElement('div'); wrap.className = 'inline-flex items-center gap-1.5'; openBtn.parentNode.insertBefore(wrap, openBtn); wrap.appendChild(openBtn); const delBtn = document.createElement('button'); delBtn.className = 'p-1.5 rounded-lg bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 text-xs font-semibold transition inline-flex items-center shadow-2xs'; delBtn.title = 'Delete Account'; delBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>'; delBtn.onclick = (e) => { e.stopPropagation(); confirmDeleteCustomer(cid); }; wrap.appendChild(delBtn); } } }); };</script></div>
+<!-- END: NotificationToast -->
+<!-- BEGIN: ApplicationLogic -->
+<script data-purpose="application-logic">
+    // Mock Data Store representing SQLite customer balance database with explicit business model:
+    // Positive balance (+) = We Owe Customer money (unpaid cash due to pay them)
+    // Negative balance (-) = We gave customer money in advance (Advance Given)
+    // Zero balance ($0.00) = Settled (paid everything)
+    let appData = {
+      currentCurrency: 'USD ($)',
+      currencies: ['USD ($)'],
+      language: 'en',
+      authStatus: { isConfigured: false, hintQuestion: '', hintAnswer: '' },
+      currentView: 'sheet', // Default active view is Balance Sheet
+      activeCustomerId: '',
+      yards: ['North Yard', 'East Yard', 'Pier 9 Depot', 'West Yard'],
+      customers: []
+    };
+
+    function extractCurrencySymbol(currencyLabel) {
+      if (!currencyLabel) return '$';
+      const match = String(currencyLabel).match(/\(([^)]+)\)/);
+      if (match && match[1]) return match[1].trim();
+      const trimmed = String(currencyLabel).trim();
+      return trimmed || '$';
+    }
+
+    function extractCurrencyShortName(currencyLabel) {
+      if (!currencyLabel) return 'USD';
+      const match = String(currencyLabel).match(/^([^(]+)/);
+      if (match && match[1]) return match[1].trim().toUpperCase();
+      return String(currencyLabel).trim().toUpperCase() || 'USD';
+    }
+
+    function buildCurrencyLabel(shortName, symbol) {
+      const code = (shortName || '').trim().toUpperCase();
+      const sym = (symbol || '').trim();
+      if (code && sym) return `${code} (${sym})`;
+      if (code) return code;
+      if (sym) return sym;
+      return 'USD ($)';
+    }
+
+    function getActiveCurrencySymbol() {
+      return extractCurrencySymbol(appData.currentCurrency || 'USD ($)');
+    }
+
+    function classifyBalance(balance) {
+      const num = Number(balance);
+      if (!Number.isFinite(num)) return 'SETTLED';
+      const rounded = Math.round(num * 100) / 100;
+      if (rounded === 0 || Math.abs(rounded) < 0.005) return 'SETTLED';
+      return rounded > 0 ? 'OWING' : 'ADVANCE';
+    }
+
+    // Helper: Format signed money based on positive / negative
+    function formatSignedBalance(amount, currencySymbol) {
+      const sym = currencySymbol ? extractCurrencySymbol(currencySymbol) : getActiveCurrencySymbol();
+      const num = Number(amount);
+      if (!Number.isFinite(num)) return sym + '0.00';
+      const rounded = Math.round(num * 100) / 100;
+      if (rounded === 0 || Math.abs(rounded) < 0.005) {
+        return sym + '0.00';
+      } else if (rounded > 0) {
+        return '+' + sym + Math.abs(rounded).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } else {
+        return '-' + sym + Math.abs(rounded).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+    }
+
+    function formatMoney(amount, currencySymbol) {
+      const sym = currencySymbol ? extractCurrencySymbol(currencySymbol) : getActiveCurrencySymbol();
+      const num = Math.abs(Number(amount));
+      if (!Number.isFinite(num)) return sym + '0.00';
+      const rounded = Math.round(num * 100) / 100;
+      return sym + rounded.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Toast with error/success icon differentiation
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      const msgElem = document.getElementById('toast-message');
+      const iconElem = document.getElementById('toast-icon');
+      if (!toast || !msgElem) return;
+      msgElem.innerText = message;
+      const isWarnOrError = type === 'error' || type === 'warn' || /please|invalid|cannot|incorrect|required|error|no unpaid/i.test(message);
+      if (iconElem) {
+        if (isWarnOrError) {
+          iconElem.innerHTML = '<svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>';
+        } else {
+          iconElem.innerHTML = '<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>';
+        }
+      }
+      toast.classList.remove('hidden', 'opacity-0', 'translate-y-2');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.classList.add('hidden'), 300);
+      }, 3000);
+    }
+
+    // DB Traffic Toggle
+    function toggleDbTraffic() {
+      const el = document.getElementById('db-traffic-indicator');
+      const dot = document.getElementById('db-traffic-dot');
+      const ping = document.getElementById('db-traffic-ping');
+      const text = document.getElementById('db-traffic-status');
+      const isBusy = el.getAttribute('data-busy') === 'true';
+
+      if (isBusy) {
+        el.setAttribute('data-busy', 'false');
+        el.setAttribute('title', 'Database: Idle / Connected (Click to simulate traffic)');
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs';
+        ping.className = 'hidden';
+        text.innerText = 'Idle';
+        text.className = 'text-[11px] font-semibold text-emerald-700';
+      } else {
+        el.setAttribute('data-busy', 'true');
+        el.setAttribute('title', 'Database: Traffic Active / Syncing (Click to set Idle)');
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shadow-xs';
+        ping.className = 'absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75 animate-ping';
+        text.innerText = 'Traffic';
+        text.className = 'text-[11px] font-semibold text-rose-700';
+      }
+    }
+
+    // System Auth / Lock
+    const LOCAL_AUTH_STORAGE_KEY = 'adm_auth_v2';
+
+    function loadLocalAuthBackup() {
+      try {
+        const raw = localStorage.getItem(LOCAL_AUTH_STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function saveLocalAuthBackup(passcode, hintQuestion) {
+      try {
+        localStorage.setItem(
+          LOCAL_AUTH_STORAGE_KEY,
+          JSON.stringify({ isConfigured: true, passcode, hintQuestion })
+        );
+      } catch (e) {}
+    }
+
+    function updateAuthModalUI() {
+      const setupForm = document.getElementById('setup-password-form');
+      const loginForm = document.getElementById('login-form');
+      const title = document.getElementById('login-modal-title');
+      const subtitle = document.getElementById('login-modal-subtitle');
+      const passInput = document.getElementById('password-input');
+      const errEl = document.getElementById('login-error-msg');
+      const hintBox = document.getElementById('login-hint-box');
+      // Do not wipe passInput.value here so user typing or background events never reset password input
+      if (errEl) errEl.classList.add('hidden');
+      if (hintBox) hintBox.classList.add('hidden');
+
+      const localBackup = loadLocalAuthBackup();
+      if (appData.authStatus && !appData.authStatus.isConfigured) {
+        try { localStorage.removeItem(LOCAL_AUTH_STORAGE_KEY); } catch (e) {}
+      } else if (!appData.authStatus && localBackup && localBackup.isConfigured) {
+        appData.authStatus = {
+          isConfigured: true,
+          hintQuestion: localBackup.hintQuestion || '',
+          hintAnswer: ''
+        };
+      }
+
+      const recForm = document.getElementById('recovery-form');
+
+      if (appData.authStatus && appData.authStatus.isConfigured) {
+        if (setupForm) setupForm.classList.add('hidden');
+        if (recForm) recForm.classList.add('hidden');
+        if (loginForm) loginForm.classList.remove('hidden');
+        if (title) title.innerText = 'Login';
+        if (subtitle) subtitle.innerText = 'Enter your password to unlock the ledger';
+        const qEl = document.getElementById('login-hint-question-text');
+        if (qEl) {
+          qEl.innerText =
+            appData.authStatus.hintQuestion ||
+            (localBackup && localBackup.hintQuestion) ||
+            'No password hint set';
+        }
+      } else {
+        if (loginForm) loginForm.classList.add('hidden');
+        if (recForm) recForm.classList.add('hidden');
+        if (setupForm) setupForm.classList.remove('hidden');
+        if (title) title.innerText = 'Set Up Login Password';
+        if (subtitle) subtitle.innerText = 'First time setup: create a password and a hint to secure this ledger';
+        ensureSetupRecoveryCodes();
+      }
+    }
+
+    let generatedSetupRecoveryCodes = [];
+
+    function ensureSetupRecoveryCodes() {
+      if (!generatedSetupRecoveryCodes || generatedSetupRecoveryCodes.length === 0) {
+        generatedSetupRecoveryCodes = [
+          generateRandomCodeSegment(),
+          generateRandomCodeSegment(),
+          generateRandomCodeSegment(),
+          generateRandomCodeSegment()
+        ];
+      }
+      renderSetupRecoveryCodes();
+    }
+
+    function generateRandomCodeSegment() {
+      const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+      let s = '';
+      for (let i = 0; i < 8; i++) {
+        if (i === 4) s += '-';
+        s += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return s;
+    }
+
+    function renderSetupRecoveryCodes() {
+      const grid = document.getElementById('setup-recovery-codes-grid');
+      if (!grid) return;
+      grid.innerHTML = generatedSetupRecoveryCodes
+        .map(
+          code => `<div class="p-1.5 rounded-lg bg-white border border-slate-200 font-semibold text-slate-800 shadow-xs">${code}</div>`
+        )
+        .join('');
+    }
+
+    function copySetupRecoveryCodes() {
+      if (!generatedSetupRecoveryCodes || generatedSetupRecoveryCodes.length === 0) return;
+      const text = generatedSetupRecoveryCodes.join('\n');
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('btn-copy-setup-codes');
+        if (btn) {
+          const old = btn.innerText;
+          btn.innerText = 'Copied!';
+          setTimeout(() => { btn.innerText = old; }, 2000);
+        }
+        showToast('Recovery codes copied to clipboard');
+      }).catch(() => {
+        showToast('Recovery codes: ' + generatedSetupRecoveryCodes.join(', '));
+      });
+    }
+
+    function showForgotPasswordForm() {
+      const loginForm = document.getElementById('login-form');
+      const setupForm = document.getElementById('setup-password-form');
+      const recForm = document.getElementById('recovery-form');
+      if (loginForm) loginForm.classList.add('hidden');
+      if (setupForm) setupForm.classList.add('hidden');
+      if (recForm) recForm.classList.remove('hidden');
+      const title = document.getElementById('login-modal-title');
+      const subtitle = document.getElementById('login-modal-subtitle');
+      if (title) title.innerText = 'Recover Password';
+      if (subtitle) subtitle.innerText = 'Enter one of your recovery codes to reset your password';
+      const errEl = document.getElementById('recovery-error-msg');
+      if (errEl) errEl.classList.add('hidden');
+      const codeInp = document.getElementById('recovery-code-input');
+      if (codeInp) { codeInp.value = ''; codeInp.focus(); }
+    }
+
+    function showLoginForm() {
+      const loginForm = document.getElementById('login-form');
+      const setupForm = document.getElementById('setup-password-form');
+      const recForm = document.getElementById('recovery-form');
+      if (recForm) recForm.classList.add('hidden');
+      if (setupForm) setupForm.classList.add('hidden');
+      if (loginForm) loginForm.classList.remove('hidden');
+      const title = document.getElementById('login-modal-title');
+      const subtitle = document.getElementById('login-modal-subtitle');
+      if (title) title.innerText = 'Login';
+      if (subtitle) subtitle.innerText = 'Enter your password to unlock the ledger';
+      const errEl = document.getElementById('login-error-msg');
+      if (errEl) errEl.classList.add('hidden');
+    }
+
+    async function handleRecoverPasscode() {
+      const code = (document.getElementById('recovery-code-input')?.value || '').trim();
+      const newPass = (document.getElementById('recovery-new-password-input')?.value || '').trim();
+      const confirmPass = (document.getElementById('recovery-confirm-password-input')?.value || '').trim();
+      const errEl = document.getElementById('recovery-error-msg');
+
+      if (!code || !newPass || !confirmPass) {
+        if (errEl) {
+          errEl.innerText = 'Please enter your recovery code, new password, and confirmation.';
+          errEl.classList.remove('hidden');
+        }
+        showToast('Please fill out all recovery fields.');
+        return;
+      }
+      if (newPass !== confirmPass) {
+        if (errEl) {
+          errEl.innerText = 'Passwords do not match. Please verify your new password.';
+          errEl.classList.remove('hidden');
+        }
+        showToast('Passwords do not match.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'recoverPasscode',
+            payload: { recoveryCode: code, newPasscode: newPass, confirmPasscode: confirmPass }
+          })
+        });
+        const json = await res.json();
+        if (!json.ok) {
+          if (errEl) {
+            errEl.innerText = json.error || 'Invalid or already used recovery code.';
+            errEl.classList.remove('hidden');
+          }
+          showToast(json.error || 'Password recovery failed.');
+          return;
+        }
+
+        saveLocalAuthBackup(newPass, appData.authStatus.hintQuestion);
+        showToast('Password reset successfully! Log in with your new password.');
+        showLoginForm();
+        const passInp = document.getElementById('password-input');
+        if (passInp) {
+          passInp.value = '';
+          passInp.focus();
+        }
+      } catch (e) {
+        if (errEl) {
+          errEl.innerText = 'Network error while attempting password recovery.';
+          errEl.classList.remove('hidden');
+        }
+      }
+    }
+
+    function transitionToLoginAfterSetup(pass, hint) {
+      saveLocalAuthBackup(pass, hint);
+      appData.authStatus = { isConfigured: true, hintQuestion: hint, hintAnswer: '' };
+      const setupPassEl = document.getElementById('setup-password-input');
+      const setupConfirmEl = document.getElementById('setup-confirm-password-input');
+      const setupHintEl = document.getElementById('setup-hint-question');
+      if (setupPassEl) setupPassEl.value = '';
+      if (setupConfirmEl) setupConfirmEl.value = '';
+      if (setupHintEl) setupHintEl.value = '';
+      updateAuthModalUI();
+      const loginPassEl = document.getElementById('password-input');
+      if (loginPassEl) {
+        loginPassEl.value = '';
+        loginPassEl.focus();
+      }
+      showToast('Password set up! Save your recovery codes safely.');
+    }
+
+    function togglePasswordHint() {
+      const box = document.getElementById('login-hint-box');
+      if (box) box.classList.toggle('hidden');
+    }
+
+    async function handleSetupPasscode() {
+      const pass = (document.getElementById('setup-password-input')?.value || '').trim();
+      const confirmPass = (document.getElementById('setup-confirm-password-input')?.value || '').trim();
+      const hint = (document.getElementById('setup-hint-question')?.value || '').trim();
+      const setupErr = document.getElementById('setup-error-msg');
+
+      if (!pass || !confirmPass || !hint) {
+        if (setupErr) {
+          setupErr.innerText = 'Please enter password, confirmation, and a hint.';
+          setupErr.classList.remove('hidden');
+        }
+        showToast('Please enter password, confirmation, and a hint.');
+        return;
+      }
+
+      if (pass !== confirmPass) {
+        if (setupErr) {
+          setupErr.innerText = 'Passwords do not match. Please verify your password.';
+          setupErr.classList.remove('hidden');
+        }
+        showToast('Passwords do not match.');
+        return;
+      }
+
+      if (setupErr) setupErr.classList.add('hidden');
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'setupPasscode',
+            payload: {
+              passcode: pass,
+              confirmPasscode: confirmPass,
+              hintQuestion: hint,
+              hintAnswer: '',
+              recoveryCodes: generatedSetupRecoveryCodes
+            }
+          })
+        });
+      } catch (e) {}
+      transitionToLoginAfterSetup(pass, hint);
+    }
+
+    async function handleLogin() {
+      const passInput = document.getElementById('password-input');
+      const errEl = document.getElementById('login-error-msg');
+      const pass = passInput ? passInput.value : '';
+      if (!pass) return;
+
+      let verified = false;
+      let serverError = '';
+      try {
+        const res = await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'verifyPasscode', payload: { passcode: pass } })
+        });
+        const json = await res.json();
+        if (json && json.ok) {
+          verified = true;
+          if (json.sessionToken) {
+            try { localStorage.setItem('adm_session_token', json.sessionToken); } catch (e) {}
+          }
+        } else if (json && json.error) {
+          serverError = json.error;
+          if (json.attemptsRemaining !== undefined && json.attemptsRemaining > 0) {
+            serverError = `${json.error} (${json.attemptsRemaining} attempt${json.attemptsRemaining === 1 ? '' : 's'} remaining)`;
+          }
+        }
+      } catch (e) {
+        const localBackup = loadLocalAuthBackup();
+        if (localBackup && localBackup.isConfigured && localBackup.passcode) {
+          verified = pass === localBackup.passcode;
+        }
+      }
+
+      if (verified) {
+        if (passInput) passInput.value = '';
+        if (errEl) errEl.classList.add('hidden');
+        const hintBox = document.getElementById('login-hint-box');
+        if (hintBox) hintBox.classList.add('hidden');
+        document.getElementById('login-modal').classList.add('hidden');
+        showToast('Logged in successfully.');
+        renderDashboard();
+      } else {
+        if (errEl) {
+          errEl.innerText = serverError || 'Incorrect password. Try again or click Hint.';
+          errEl.classList.remove('hidden');
+        }
+        showToast(serverError || 'Incorrect password. Click "Hint" if you need a reminder.');
+      }
+    }
+
+    function lockSystem() {
+      const passInput = document.getElementById('password-input');
+      if (passInput) passInput.value = '';
+      try { localStorage.removeItem('adm_session_token'); } catch (e) {}
+      if (typeof postSqliteAction === 'function') {
+        postSqliteAction('lock', {}).catch(() => {});
+      }
+      updateAuthModalUI();
+      document.getElementById('login-modal').classList.remove('hidden');
+    }
+
+    async function resetPasswordFromSettings() {
+      openResetPasswordModal();
+    }
+
+    function openResetPasswordModal() {
+      const isConfigured = appData.authStatus && appData.authStatus.isConfigured;
+      if (!isConfigured) {
+        resetPasswordFromSettingsDirect();
+        return;
+      }
+      const inp = document.getElementById('reset-passcode-old-input');
+      const err = document.getElementById('reset-passcode-error');
+      if (inp) inp.value = '';
+      if (err) { err.innerText = ''; err.classList.add('hidden'); }
+      document.getElementById('modal-reset-password').classList.remove('hidden');
+    }
+
+    function closeResetPasswordModal() {
+      const m = document.getElementById('modal-reset-password');
+      if (m) m.classList.add('hidden');
+    }
+
+    async function submitResetPasswordWithOld() {
+      const inp = document.getElementById('reset-passcode-old-input');
+      const err = document.getElementById('reset-passcode-error');
+      const oldPasscode = inp ? inp.value : '';
+      if (!oldPasscode) {
+        if (err) { err.innerText = 'Please enter your current password.'; err.classList.remove('hidden'); }
+        showToast('Please enter your current password.', 'warn');
+        return;
+      }
+
+      let verified = false;
+      try {
+        const res = await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'resetPasscode', payload: { oldPasscode } })
+        });
+        const json = await res.json();
+        if (json && json.ok) {
+          verified = true;
+        } else {
+          if (err) { err.innerText = (json && json.error) || 'Incorrect current password.'; err.classList.remove('hidden'); }
+          showToast((json && json.error) || 'Incorrect current password.', 'error');
+          return;
+        }
+      } catch (e) {
+        const localBackup = loadLocalAuthBackup();
+        if (localBackup && localBackup.passcode === oldPasscode) {
+          verified = true;
+        } else {
+          if (err) { err.innerText = 'Incorrect current password.'; err.classList.remove('hidden'); }
+          showToast('Incorrect current password.', 'error');
+          return;
+        }
+      }
+
+      if (verified) {
+        closeResetPasswordModal();
+        resetPasswordFromSettingsDirect();
+      }
+    }
+
+    function resetPasswordFromSettingsDirect() {
+      try {
+        localStorage.removeItem(LOCAL_AUTH_STORAGE_KEY);
+      } catch (e) {}
+      appData.authStatus = { isConfigured: false, hintQuestion: '', hintAnswer: '' };
+      if (typeof closeSettingsDrawer === 'function') closeSettingsDrawer();
+      updateAuthModalUI();
+      document.getElementById('login-modal').classList.remove('hidden');
+      const setupPassEl = document.getElementById('setup-password-input');
+      if (setupPassEl) {
+        setupPassEl.value = '';
+        setupPassEl.focus();
+      }
+      showToast('Password reset. Please set up your new password and hint.');
+    }
+
+    // Switch Views
+    function switchView(viewName) {
+      appData.currentView = viewName;
+      const dirView = document.getElementById('view-directory');
+      const ledgerView = document.getElementById('view-ledger');
+      const sheetsView = document.getElementById('view-all-sheets');
+
+      const tabDir = document.getElementById('nav-tab-directory');
+      const tabSheet = document.getElementById('nav-tab-sheet');
+
+      dirView.classList.add('hidden');
+      ledgerView.classList.add('hidden');
+      sheetsView.classList.add('hidden');
+
+      tabDir.className = "px-4 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition text-slate-600 hover:text-slate-900";
+      tabSheet.className = "px-4 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition text-slate-600 hover:text-slate-900";
+
+      if (viewName === 'directory') {
+        dirView.classList.remove('hidden');
+        tabDir.className = "px-4 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition bg-white text-indigo-700 shadow-sm";
+        renderCustomersTable();
+      } else if (viewName === 'ledger') {
+        ledgerView.classList.remove('hidden');
+        updateCurrencyDropdowns();
+        renderActiveCustomerLedger();
+      } else if (viewName === 'sheet') {
+        sheetsView.classList.remove('hidden');
+        tabSheet.className = "px-4 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition bg-white text-indigo-700 shadow-sm";
+        renderAllSheetsTable();
+      }
+    }
+
+    function parseDateForSort(dateStr) {
+      if (!dateStr || typeof dateStr !== 'string') return 0;
+      const trimmed = dateStr.trim();
+      if (!trimmed) return 0;
+      const normalized = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
+      const parsed = Date.parse(normalized);
+      if (!isNaN(parsed)) return parsed;
+      const parts = trimmed.split(/[-/ :T]/).map(Number);
+      if (parts.length >= 3) {
+        if (parts[0] > 1000) {
+          return new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1, parts[3] || 0, parts[4] || 0).getTime();
+        } else if (parts[2] > 1000) {
+          return new Date(parts[2], (parts[0] || 1) - 1, parts[1] || 1, parts[3] || 0, parts[4] || 0).getTime();
+        }
+      }
+      return 0;
+    }
+
+    // Render Directory View Table
+    function renderCustomersTable(filterQuery = '') {
+      const tbody = document.getElementById('customer-table-body');
+      tbody.innerHTML = '';
+
+      const query = filterQuery.toLowerCase().trim();
+      const filtered = appData.customers.filter(c => {
+        return c.name.toLowerCase().includes(query) ||
+               c.defaultYard.toLowerCase().includes(query) ||
+               c.id.toLowerCase().includes(query) ||
+               (c.notes && c.notes.toLowerCase().includes(query));
+      });
+
+      document.getElementById('customer-count-indicator').innerText = `Showing ${filtered.length} of ${appData.customers.length} accounts`;
+
+      // Sort customer directory in alphabetical order (A-Z)
+      filtered.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
+
+      filtered.forEach(cust => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/80 transition cursor-pointer group";
+        tr.onclick = () => viewCustomerLedger(cust.id);
+
+        let balClass = 'text-slate-800';
+        let badgeHtml = '';
+
+        if (cust.balance > 0) {
+          balClass = 'text-rose-600 font-bold';
+          badgeHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border bg-rose-50 text-rose-700 border-rose-200">We Owe Customer (+)</span>';
+        } else if (cust.balance < 0) {
+          balClass = 'text-amber-600 font-bold';
+          badgeHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border bg-amber-50 text-amber-800 border-amber-200">Advance Given (-)</span>';
+        } else {
+          balClass = 'text-emerald-600 font-bold';
+          badgeHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">Settled (' + formatSignedBalance(0) + ')</span>';
+        }
+
+        const rawNotes = (cust.notes || cust.phone || '').trim();
+        const cleanNotes = rawNotes.includes('+1 (555)') ? '' : rawNotes;
+        const notesSubtitleHtml = cleanNotes ? `<div class="text-xs text-slate-400 mt-0.5">${cleanNotes}</div>` : '';
+
+        tr.innerHTML = `
+          <td class="py-3.5 px-6">
+            <div class="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition">${cust.name}</div>
+            ${notesSubtitleHtml}
+          </td>
+          <td class="py-3.5 px-6 font-medium text-slate-600">${cust.defaultYard}</td>
+          <td class="py-3.5 px-6 text-right">
+            <span class="font-black text-sm ${balClass}">
+              ${formatSignedBalance(cust.balance)}
+            </span>
+          </td>
+          <td class="py-3.5 px-6 text-xs text-slate-500 font-mono">${cust.lastUpdate}</td>
+          <td class="py-3.5 px-6 text-center">
+            ${badgeHtml}
+          </td>
+          <td class="py-3.5 px-6 text-right">
+            <button 
+              onclick="event.stopPropagation(); viewCustomerLedger('${cust.id}')" 
+              class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-700 text-xs font-semibold transition inline-flex items-center gap-1 shadow-2xs">
+              Open Ledger &rarr;
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterCustomersTable() {
+      const q = document.getElementById('customer-search-input').value;
+      renderCustomersTable(q);
+    }
+
+    // Consolidated Balance Sheet View
+    function renderAllSheetsTable() {
+      updateFinancialMetrics();
+      applySheetFilters();
+    }
+
+    function updateFinancialMetrics() {
+      let totalOwing = 0; // Positive balance
+      let owingCount = 0;
+      let totalAdvance = 0; // Negative balance (money given in advance)
+      let advanceCount = 0;
+      let settledCount = 0;
+
+      appData.customers.forEach(c => {
+        const bal = Math.round((Number(c.balance) || 0) * 100) / 100;
+        const cls = classifyBalance(bal);
+        if (cls === 'OWING') {
+          totalOwing = Math.round((totalOwing + bal) * 100) / 100;
+          owingCount++;
+        } else if (cls === 'ADVANCE') {
+          totalAdvance = Math.round((totalAdvance + Math.abs(bal)) * 100) / 100;
+          advanceCount++;
+        } else {
+          settledCount++;
+        }
+      });
+
+      const netPosition = Math.round((totalOwing - totalAdvance) * 100) / 100;
+
+      document.getElementById('sheet-metric-owing').innerText = '+' + formatMoney(totalOwing);
+      document.getElementById('sheet-metric-owing-count').innerText = `${owingCount} customers to pay`;
+
+      document.getElementById('sheet-metric-advance').innerText = '-' + formatMoney(totalAdvance);
+      document.getElementById('sheet-metric-advance-count').innerText = `${advanceCount} accounts in advance`;
+
+      document.getElementById('sheet-metric-net').innerText = formatSignedBalance(netPosition);
+      document.getElementById('sheet-metric-settled-count').innerText = `${settledCount} settled ($0)`;
+
+      const totalAccEl = document.getElementById('sheet-total-accounts');
+      if (totalAccEl) {
+        totalAccEl.innerText = `${appData.customers.length} Accounts Total`;
+      }
+    }
+
+    // Filter toolbar handling
+    function applySheetFilters() {
+      const yardVal = document.getElementById('sheet-yard-select').value;
+      const typeVal = document.getElementById('sheet-type-select').value;
+      const searchVal = (document.getElementById('sheet-search-filter').value || '').toLowerCase().trim();
+      const amountPreset = document.getElementById('sheet-amount-preset').value;
+
+      const tbody = document.getElementById('all-sheets-tbody');
+      tbody.innerHTML = '';
+
+      const filtered = appData.customers.filter(cust => {
+        // Yard
+        if (yardVal !== 'ALL' && cust.defaultYard !== yardVal) return false;
+
+        // Classification
+        const cls = classifyBalance(cust.balance);
+        if (typeVal === 'OWING' && cls !== 'OWING') return false;
+        if (typeVal === 'ADVANCE' && cls !== 'ADVANCE') return false;
+        if (typeVal === 'SETTLED' && cls !== 'SETTLED') return false;
+
+        // Search
+        if (searchVal) {
+          const matchName = cust.name.toLowerCase().includes(searchVal);
+          const matchNotes = (cust.notes || '').toLowerCase().includes(searchVal);
+          const matchId = cust.id.toLowerCase().includes(searchVal);
+          const matchYard = cust.defaultYard.toLowerCase().includes(searchVal);
+          if (!matchName && !matchNotes && !matchId && !matchYard) return false;
+        }
+
+        // Amount preset
+        const roundedBal = Math.round((Number(cust.balance) || 0) * 100) / 100;
+        if (amountPreset === 'GT5000' && Math.abs(roundedBal) < 5000) return false;
+        if (amountPreset === 'GT10000' && Math.abs(roundedBal) < 10000) return false;
+        if (amountPreset === 'NEGATIVE' && cls !== 'ADVANCE') return false;
+
+        return true;
+      });
+
+      document.getElementById('sheet-filtered-count').innerText = `Showing ${filtered.length} of ${appData.customers.length} accounts`;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400 text-xs">No customer records matching selected filters.</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(cust => {
+        const totalInvoiced = Math.round(
+          (cust.ledger || []).reduce((acc, curr) => acc + (Number(curr.invoice) || 0), 0) * 100
+        ) / 100;
+        const totalPaid = Math.round(
+          (cust.ledger || []).reduce((acc, curr) => acc + (Number(curr.paid) || 0), 0) * 100
+        ) / 100;
+
+        let balClass = 'text-slate-800';
+        let badgeHtml = '';
+
+        const cls = classifyBalance(cust.balance);
+        if (cls === 'OWING') {
+          balClass = 'text-rose-600 font-black';
+          badgeHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">We Owe Customer (+)</span>';
+        } else if (cls === 'ADVANCE') {
+          balClass = 'text-amber-600 font-black';
+          badgeHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">Advance Given (-)</span>';
+        } else {
+          balClass = 'text-emerald-700 font-black';
+          badgeHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Settled ($0)</span>';
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition cursor-pointer group";
+        tr.onclick = () => viewCustomerLedger(cust.id);
+
+        tr.innerHTML = `
+          <td class="py-3.5 px-6">
+            <div class="font-bold text-slate-900 group-hover:text-indigo-600 transition">${cust.name}</div>
+            ${cust.notes ? `<div class="text-xs text-slate-500 font-normal truncate max-w-xs mt-0.5">${cust.notes}</div>` : ''}
+          </td>
+          <td class="py-3.5 px-6 text-xs font-medium text-slate-600">${cust.defaultYard}</td>
+          <td class="py-3.5 px-6 text-right font-semibold text-slate-700">${formatMoney(totalInvoiced)}</td>
+          <td class="py-3.5 px-6 text-right font-semibold text-emerald-600">${formatMoney(totalPaid)}</td>
+          <td class="py-3.5 px-6 text-right ${balClass} text-sm">${formatSignedBalance(cust.balance)}</td>
+          <td class="py-3.5 px-6 text-center">
+            ${badgeHtml}
+          </td>
+          <td class="py-3.5 px-6 text-right">
+            <button 
+              onclick="event.stopPropagation(); viewCustomerLedger('${cust.id}')" 
+              class="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 text-xs font-semibold transition inline-flex items-center gap-1 shadow-2xs">
+              Open Ledger &rarr;
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function setQuickPillFilter(type) {
+      document.getElementById('sheet-type-select').value = type;
+
+      const pills = document.querySelectorAll('.sheet-pill');
+      pills.forEach(p => {
+        p.className = 'sheet-pill px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200';
+      });
+
+      const activeBtn = document.getElementById(
+        type === 'ALL' ? 'pill-all' :
+        type === 'OWING' ? 'pill-owing' :
+        type === 'ADVANCE' ? 'pill-advance' : 'pill-settled'
+      );
+      if (activeBtn) {
+        activeBtn.className = 'sheet-pill px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 text-white shadow-xs';
+      }
+
+      applySheetFilters();
+    }
+
+    function resetSheetFilters() {
+      document.getElementById('sheet-yard-select').value = 'ALL';
+      document.getElementById('sheet-type-select').value = 'ALL';
+      document.getElementById('sheet-search-filter').value = '';
+      document.getElementById('sheet-amount-preset').value = 'ALL';
+      setQuickPillFilter('ALL');
+    }
+
+    // Inspect individual customer ledger
+    function viewCustomerLedger(customerId) {
+      appData.activeCustomerId = customerId;
+      switchView('ledger');
+    }
+
+    function renderActiveCustomerLedger() {
+      const cust = appData.customers.find(c => c.id === appData.activeCustomerId);
+      if (!cust) return;
+
+      const nameEl = document.getElementById('ledger-customer-name');
+      if (nameEl) nameEl.innerText = cust.name;
+      const idEl = document.getElementById('ledger-customer-id');
+      if (idEl) idEl.innerText = cust.id;
+      const yardEl = document.getElementById('ledger-customer-yard');
+      if (yardEl) yardEl.innerText = cust.defaultYard || '';
+      const balEl = document.getElementById('ledger-balance-left');
+      if (balEl) balEl.innerText = formatSignedBalance(cust.balance);
+      const subEl = document.getElementById('payment-modal-subtitle');
+      if (subEl) subEl.innerText = `${cust.name} (${cust.id})`;
+
+      const statusBadge = document.getElementById('ledger-customer-status');
+      const cardContainer = document.getElementById('ledger-balance-card-container');
+      const balLabel = document.getElementById('ledger-balance-label');
+      const balDisplay = document.getElementById('ledger-balance-left');
+
+      if (cust.balance > 0) {
+        if (statusBadge) {
+          statusBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800';
+          statusBadge.innerText = 'We Owe Customer: ' + formatSignedBalance(cust.balance);
+        }
+        if (cardContainer) cardContainer.className = 'p-3.5 rounded-xl border bg-rose-50 border-rose-200';
+        if (balLabel) {
+          balLabel.className = 'text-[11px] font-bold uppercase tracking-wider text-rose-700 flex items-center justify-end gap-1';
+          balLabel.innerHTML = '<span>We Owe Customer (+)</span>';
+        }
+        if (balDisplay) balDisplay.className = 'text-2xl sm:text-3xl font-black text-rose-700 font-sans tracking-tight';
+      } else if (cust.balance < 0) {
+        if (statusBadge) {
+          statusBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800';
+          statusBadge.innerText = 'Advance Given: ' + formatSignedBalance(cust.balance);
+        }
+        if (cardContainer) cardContainer.className = 'p-3.5 rounded-xl border bg-amber-50 border-amber-200';
+        if (balLabel) {
+          balLabel.className = 'text-[11px] font-bold uppercase tracking-wider text-amber-800 flex items-center justify-end gap-1';
+          balLabel.innerHTML = '<span>Advance Given (-)</span>';
+        }
+        if (balDisplay) balDisplay.className = 'text-2xl sm:text-3xl font-black text-amber-700 font-sans tracking-tight';
+      } else {
+        if (statusBadge) {
+          statusBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800';
+          statusBadge.innerText = 'Settled ($0.00)';
+        }
+        if (cardContainer) cardContainer.className = 'p-3.5 rounded-xl border bg-emerald-50 border-emerald-200';
+        if (balLabel) {
+          balLabel.className = 'text-[11px] font-bold uppercase tracking-wider text-emerald-700 flex items-center justify-end gap-1';
+          balLabel.innerHTML = '<span>Settled ($0.00)</span>';
+        }
+        if (balDisplay) balDisplay.className = 'text-2xl sm:text-3xl font-black text-emerald-700 font-sans tracking-tight';
+      }
+
+      const payFullBtn = document.getElementById('btn-pay-full-balance');
+      if (payFullBtn) {
+        payFullBtn.disabled = cust.balance <= 0;
+        payFullBtn.className = cust.balance > 0
+          ? 'px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs transition cursor-pointer'
+          : 'px-3 py-1.5 bg-slate-200 text-slate-400 text-xs font-bold rounded-lg cursor-not-allowed';
+      }
+
+      // Populate Ledger Rows
+      const yardFilterEl = document.getElementById('ledger-yard-filter');
+      const filterYard = yardFilterEl ? yardFilterEl.value : 'ALL';
+      const tbody = document.getElementById('ledger-entries-tbody');
+      if (tbody) {
+        tbody.innerHTML = '';
+
+        const entriesWithIndex = (cust.ledger || []).map((item, originalIndex) => ({ item, originalIndex }));
+
+        const filtered = entriesWithIndex.filter(({ item }) => {
+          if (filterYard === 'ALL') return true;
+          return item.yard === filterYard;
+        });
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400 text-xs">No transaction records found for this yard filter.</td></tr>`;
+          return;
+        }
+
+        // Sort customer ledger by date: oldest to top, newest to bottom
+        filtered.sort((a, b) => {
+          const tsA = parseDateForSort(a.item.date);
+          const tsB = parseDateForSort(b.item.date);
+          if (tsA !== tsB) return tsA - tsB;
+          const cmp = String(a.item.date || '').localeCompare(String(b.item.date || ''));
+          if (cmp !== 0) return cmp;
+          return a.originalIndex - b.originalIndex;
+        });
+
+        filtered.forEach(({ item, originalIndex }) => {
+          const realIdx = originalIndex;
+          const itemSym = item.currency || appData.currentCurrency;
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-50 transition";
+          tr.innerHTML = `
+            <td class="py-3 px-6 text-xs font-mono text-slate-600">${item.date}</td>
+            <td class="py-3 px-6 font-semibold ${item.invoice > 0 ? 'text-rose-600' : 'text-slate-400'}">
+              ${item.invoice > 0 ? '+' + formatMoney(item.invoice, itemSym) : '—'}
+            </td>
+            <td class="py-3 px-6 font-bold ${item.paid > 0 ? 'text-emerald-600' : 'text-slate-400'}">
+              ${item.paid > 0 ? '-' + formatMoney(item.paid, itemSym) : '—'}
+            </td>
+            <td class="py-3 px-6 text-xs text-slate-600">
+              <span class="inline-flex px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">${item.method}</span>
+            </td>
+            <td class="py-3 px-6 text-xs text-slate-700 font-medium">${item.yard}</td>
+            <td class="py-3 px-6 text-xs text-slate-500">${item.memo || 'Unpaid amount added'}</td>
+            <td class="py-3 px-6 text-right font-black ${item.runningBalance < 0 ? 'text-amber-600' : item.runningBalance > 0 ? 'text-rose-600' : 'text-slate-900'}">${formatSignedBalance(item.runningBalance, itemSym)}</td>
+            <td class="py-3 px-6 text-center no-print">
+              <div class="inline-flex items-center gap-1.5">
+                <button class="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 text-xs font-semibold transition cursor-pointer" title="Edit Ledger Entry" onclick="openEditLedgerEntryModal(${realIdx})">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                </button>
+                <button class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 text-xs font-semibold transition cursor-pointer" title="Delete Ledger Entry" onclick="confirmDeleteLedgerEntry(${realIdx})">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+
+    // Modal Control: Add Customer
+    function openAddCustomerModal() {
+      document.getElementById('modal-add-customer').classList.remove('hidden');
+    }
+
+    function closeAddCustomerModal() {
+      document.getElementById('modal-add-customer').classList.add('hidden');
+      document.getElementById('form-add-customer').reset();
+    }
+
+    async function submitNewCustomer() {
+      const name = document.getElementById('input-customer-name').value.trim();
+      const balance = Math.round((parseFloat(document.getElementById('input-customer-balance').value) || 0) * 100) / 100;
+      const yard = document.getElementById('input-customer-yard').value;
+      const contact = (document.getElementById('input-customer-contact').value || '').trim();
+
+      if (!name) {
+        showToast('Please enter customer / company name.');
+        return;
+      }
+
+      if (appData && Array.isArray(appData.customers)) {
+        const dup = appData.customers.find(c => c.name.trim().toLowerCase() === name.toLowerCase());
+        if (dup) {
+          showToast('Customer "' + name + '" already exists.');
+          return;
+        }
+      }
+
+      const newId = `CUST-${1000 + appData.customers.length + 1}`;
+      const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+      const newCust = {
+        id: newId,
+        name: name,
+        defaultYard: yard,
+        balance: balance,
+        lastUpdate: now,
+        phone: '',
+        notes: contact,
+        ledger: [
+          {
+            date: now,
+            invoice: balance > 0 ? balance : 0,
+            paid: balance < 0 ? Math.abs(balance) : 0,
+            method: balance < 0 ? 'Cash' : 'Unpaid Due',
+            yard: yard,
+            memo: contact || (balance < 0 ? 'Initial advance given to customer' : 'Unpaid balance to pay customer'),
+            runningBalance: balance
+          }
+        ]
+      };
+
+      appData.customers.unshift(newCust);
+      closeAddCustomerModal();
+      showToast(`Customer account "${name}" created!`);
+      renderDashboard();
+
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'createCustomer',
+            payload: { name, balance, defaultYard: yard, phone: '', notes: contact }
+          })
+        });
+      } catch (e) {}
+    }
+
+    // Inline Add Customer row from Directory
+    async function addInlineCustomer() {
+      const name = document.getElementById('quick-add-cust-name').value.trim();
+      const yard = document.getElementById('quick-add-cust-yard').value;
+      const bal = Math.round((parseFloat(document.getElementById('quick-add-cust-bal').value) || 0) * 100) / 100;
+      const notes = document.getElementById('quick-add-cust-phone').value.trim();
+
+      if (!name) {
+        showToast('Please enter customer / company name.');
+        return;
+      }
+
+      if (appData && Array.isArray(appData.customers)) {
+        const dup = appData.customers.find(c => c.name.trim().toLowerCase() === name.toLowerCase());
+        if (dup) {
+          showToast('Customer "' + name + '" already exists.');
+          return;
+        }
+      }
+
+      const newId = `CUST-${1000 + appData.customers.length + 1}`;
+      const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+      appData.customers.unshift({
+        id: newId,
+        name: name,
+        defaultYard: yard,
+        balance: bal,
+        lastUpdate: now,
+        phone: '',
+        notes: notes,
+        ledger: [
+          {
+            date: now,
+            invoice: bal > 0 ? bal : 0,
+            paid: bal < 0 ? Math.abs(bal) : 0,
+            method: bal < 0 ? 'Cash' : 'Unpaid Due',
+            yard: yard,
+            memo: notes || (bal < 0 ? 'Initial advance given to customer' : 'Unpaid balance to pay customer'),
+            runningBalance: bal
+          }
+        ]
+      });
+
+      document.getElementById('quick-add-cust-name').value = '';
+      document.getElementById('quick-add-cust-bal').value = '';
+      document.getElementById('quick-add-cust-phone').value = '';
+
+      showToast(`Customer "${name}" added.`);
+      renderDashboard();
+
+      try {
+        const res = await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'createCustomer',
+            payload: { name, balance: bal, defaultYard: yard, phone: '', notes }
+          })
+        });
+        const json = await res.json();
+        if (json.ok && json.state) {
+          appData.customers = json.state.customers;
+          renderDashboard();
+        }
+      } catch (e) {}
+    }
+
+    // Modal Control: Record Payment / Advance / Invoice
+    function openRecordPaymentModal() {
+      updateCurrencyDropdowns();
+      document.getElementById('modal-record-payment').classList.remove('hidden');
+    }
+
+    function closeRecordPaymentModal() {
+      document.getElementById('modal-record-payment').classList.add('hidden');
+      document.getElementById('form-record-payment').reset();
+    }
+
+    async function submitLedgerEntry() {
+      const cust = appData.customers.find(c => c.id === appData.activeCustomerId);
+      if (!cust) return;
+
+      const type = document.getElementById('input-entry-type').value;
+      const rawAmount = parseFloat(document.getElementById('input-entry-amount').value) || 0;
+      const amount = Math.round(Math.abs(rawAmount) * 100) / 100;
+      const currEl = document.getElementById('input-entry-currency');
+      const currency = currEl ? currEl.value : (appData.currentCurrency || 'USD ($)');
+      const method = document.getElementById('input-entry-method').value || 'Cash';
+      const yard = document.getElementById('input-entry-yard').value;
+      const memo = document.getElementById('input-entry-memo').value || (
+        type === 'advance' ? 'Advance given to customer' :
+        type === 'payment' ? 'Cash paid to customer' : 'Unpaid amount added'
+      );
+
+      const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+      let newBalance = cust.balance;
+      let invoiceVal = 0;
+      let paidVal = 0;
+
+      if (type === 'payment') {
+        paidVal = amount;
+        newBalance = Math.round((cust.balance - amount) * 100) / 100;
+      } else if (type === 'advance') {
+        paidVal = amount;
+        newBalance = Math.round((cust.balance - amount) * 100) / 100;
+      } else if (type === 'invoice') {
+        invoiceVal = amount;
+        newBalance = Math.round((cust.balance + amount) * 100) / 100;
+      }
+
+      cust.balance = newBalance;
+      cust.lastUpdate = now;
+      cust.ledger.push({
+        date: now,
+        invoice: invoiceVal,
+        paid: paidVal,
+        currency: currency,
+        method: method,
+        yard: yard,
+        memo: memo,
+        runningBalance: newBalance
+      });
+
+      closeRecordPaymentModal();
+      showToast(`Ledger updated for ${cust.name}`);
+      renderActiveCustomerLedger();
+      renderDashboard();
+
+      try {
+        const res = await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'addLedgerEntry',
+            payload: {
+              customerId: cust.id,
+              entryType: type,
+              amount,
+              currency,
+              method,
+              yard,
+              memo
+            }
+          })
+        });
+        const json = await res.json();
+        if (json.ok && json.state) {
+          appData.customers = json.state.customers;
+          renderActiveCustomerLedger();
+          renderDashboard();
+        }
+      } catch (e) {}
+    }
+
+    // Inline Ledger Row Add
+    async function addInlineLedgerEntry() {
+      const cust = appData.customers.find(c => c.id === appData.activeCustomerId);
+      if (!cust) return;
+
+      const dateVal = document.getElementById('inline-entry-date').value || new Date().toISOString().slice(0, 10);
+      const invVal = Math.round((parseFloat(document.getElementById('inline-entry-inv').value) || 0) * 100) / 100;
+      const paidVal = Math.round((parseFloat(document.getElementById('inline-entry-paid').value) || 0) * 100) / 100;
+      const currEl = document.getElementById('inline-entry-currency');
+      const currency = currEl ? currEl.value : (appData.currentCurrency || 'USD ($)');
+      const methodEl = document.getElementById('inline-entry-method');
+      const methodVal = methodEl ? methodEl.value : 'Cash';
+      const yardVal = document.getElementById('inline-entry-yard').value;
+      const memoVal = document.getElementById('inline-entry-memo').value.trim() || (paidVal > 0 ? 'Cash paid to customer' : 'Unpaid amount added');
+
+      if (invVal === 0 && paidVal === 0) {
+        showToast('Please enter an unpaid amount to pay customer or an amount paid.');
+        return;
+      }
+
+      const newBalance = Math.round((cust.balance + invVal - paidVal) * 100) / 100;
+      cust.balance = newBalance;
+      cust.lastUpdate = dateVal + ' ' + new Date().toTimeString().slice(0, 5);
+
+      cust.ledger.push({
+        date: cust.lastUpdate,
+        invoice: invVal,
+        paid: paidVal,
+        currency: currency,
+        method: methodVal,
+        yard: yardVal,
+        memo: memoVal,
+        runningBalance: newBalance
+      });
+
+      document.getElementById('inline-entry-inv').value = '';
+      document.getElementById('inline-entry-paid').value = '';
+      document.getElementById('inline-entry-memo').value = '';
+
+      showToast('Row posted to ledger.');
+      renderActiveCustomerLedger();
+      renderDashboard();
+
+      try {
+        const res = await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'addLedgerEntry',
+            payload: {
+              customerId: cust.id,
+              invoice: invVal,
+              paid: paidVal,
+              currency,
+              method: methodVal,
+              yard: yardVal,
+              memo: memoVal,
+              date: cust.lastUpdate
+            }
+          })
+        });
+        const json = await res.json();
+        if (json.ok && json.state) {
+          appData.customers = json.state.customers;
+          renderActiveCustomerLedger();
+          renderDashboard();
+        }
+      } catch (e) {}
+    }
+
+    async function payFullCustomerBalance() {
+      const cust = appData.customers.find(c => c.id === appData.activeCustomerId);
+      if (!cust || cust.balance <= 0) {
+        showToast('No unpaid balance to pay for this customer.');
+        return;
+      }
+
+      const dateVal = document.getElementById('inline-entry-date').value || new Date().toISOString().slice(0, 10);
+      const currEl = document.getElementById('inline-entry-currency');
+      const currency = currEl ? currEl.value : (appData.currentCurrency || 'USD ($)');
+      const methodEl = document.getElementById('inline-entry-method');
+      const methodVal = methodEl ? methodEl.value : 'Cash';
+      const yardVal = document.getElementById('inline-entry-yard').value || cust.defaultYard;
+      const memoVal = document.getElementById('inline-entry-memo').value.trim() || 'Paid full balance to customer';
+
+      const paidAmount = Math.round(cust.balance * 100) / 100;
+      cust.balance = 0;
+      cust.lastUpdate = dateVal + ' ' + new Date().toTimeString().slice(0, 5);
+
+      cust.ledger.push({
+        date: cust.lastUpdate,
+        invoice: 0,
+        paid: paidAmount,
+        currency: currency,
+        method: methodVal,
+        yard: yardVal,
+        memo: memoVal,
+        runningBalance: 0
+      });
+
+      document.getElementById('inline-entry-inv').value = '';
+      document.getElementById('inline-entry-paid').value = '';
+      document.getElementById('inline-entry-memo').value = '';
+
+      showToast('Full balance paid to customer.');
+      renderActiveCustomerLedger();
+      renderDashboard();
+
+      try {
+        const res = await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'addLedgerEntry',
+            payload: {
+              customerId: cust.id,
+              payFull: true,
+              currency,
+              method: methodVal,
+              yard: yardVal,
+              memo: memoVal,
+              date: cust.lastUpdate
+            }
+          })
+        });
+        const json = await res.json();
+        if (json.ok && json.state) {
+          appData.customers = json.state.customers;
+          renderActiveCustomerLedger();
+          renderDashboard();
+        }
+      } catch (e) {}
+    }
+
+    // Edit Customer Modal Handlers
+    let editingCustomerId = null;
+
+    function openEditCustomerModal(custId) {
+      const idToEdit = custId || appData.activeCustomerId;
+      const cust = appData.customers.find(c => c.id === idToEdit);
+      if (!cust) return;
+      editingCustomerId = cust.id;
+      document.getElementById('edit-customer-id').value = cust.id;
+      document.getElementById('edit-customer-name').value = cust.name;
+      document.getElementById('edit-customer-notes').value = cust.notes || cust.phone || '';
+      document.getElementById('edit-customer-subtitle').innerText = `${cust.name} (${cust.id})`;
+
+      const yardSelect = document.getElementById('edit-customer-yard');
+      if (yardSelect) {
+        yardSelect.innerHTML = '';
+        (appData.yards || []).forEach(y => {
+          const opt = document.createElement('option');
+          opt.value = y;
+          opt.innerText = y;
+          if (y === cust.defaultYard) opt.selected = true;
+          yardSelect.appendChild(opt);
+        });
+      }
+
+      document.getElementById('modal-edit-customer').classList.remove('hidden');
+    }
+
+    function closeEditCustomerModal() {
+      const m = document.getElementById('modal-edit-customer');
+      if (m) m.classList.add('hidden');
+      editingCustomerId = null;
+    }
+
+    async function submitEditCustomer() {
+      const custId = document.getElementById('edit-customer-id').value || editingCustomerId;
+      const name = document.getElementById('edit-customer-name').value.trim();
+      const yard = document.getElementById('edit-customer-yard').value;
+      const notes = document.getElementById('edit-customer-notes').value.trim();
+
+      if (!name) {
+        showToast('Customer name cannot be empty.');
+        return;
+      }
+
+      if (appData && Array.isArray(appData.customers)) {
+        const dup = appData.customers.find(c => c.id !== custId && c.name.trim().toLowerCase() === name.toLowerCase());
+        if (dup) {
+          showToast('Customer "' + name + '" already exists.');
+          return;
+        }
+      }
+
+      const cust = appData.customers.find(c => c.id === custId);
+      if (cust) {
+        cust.name = name;
+        cust.defaultYard = yard;
+        cust.phone = notes;
+        cust.notes = notes;
+      }
+
+      closeEditCustomerModal();
+      renderActiveCustomerLedger();
+      renderDashboard();
+      showToast(`Account "${name}" updated.`);
+
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'updateCustomer',
+            payload: { id: custId, name, defaultYard: yard, notes, phone: notes }
+          })
+        });
+      } catch (e) {}
+    }
+
+    // Edit Ledger Entry Modal Handlers
+    let editingLedgerEntryIndex = -1;
+
+    function openEditLedgerEntryModal(entryIndex) {
+      const cust = appData.customers.find(c => c.id === appData.activeCustomerId);
+      if (!cust || !cust.ledger || !cust.ledger[entryIndex]) return;
+      editingLedgerEntryIndex = entryIndex;
+      const entry = cust.ledger[entryIndex];
+
+      document.getElementById('edit-entry-index').value = entryIndex;
+      document.getElementById('edit-entry-date').value = entry.date;
+      document.getElementById('edit-entry-inv').value = entry.invoice > 0 ? entry.invoice : '';
+      document.getElementById('edit-entry-paid').value = entry.paid > 0 ? entry.paid : '';
+      document.getElementById('edit-entry-method').value = entry.method || 'Cash';
+      document.getElementById('edit-entry-memo').value = entry.memo || '';
+      document.getElementById('edit-ledger-entry-subtitle').innerText = `${cust.name} • Entry #${entryIndex + 1}`;
+
+      const currSelect = document.getElementById('edit-entry-currency');
+      if (currSelect) {
+        currSelect.innerHTML = '';
+        (appData.currencies || ['USD ($)']).forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.innerText = c;
+          if (c === (entry.currency || appData.currentCurrency)) opt.selected = true;
+          currSelect.appendChild(opt);
+        });
+      }
+
+      const yardSelect = document.getElementById('edit-entry-yard');
+      if (yardSelect) {
+        yardSelect.innerHTML = '';
+        (appData.yards || []).forEach(y => {
+          const opt = document.createElement('option');
+          opt.value = y;
+          opt.innerText = y;
+          if (y === entry.yard) opt.selected = true;
+          yardSelect.appendChild(opt);
+        });
+      }
+
+      document.getElementById('modal-edit-ledger-entry').classList.remove('hidden');
+    }
+
+    function closeEditLedgerEntryModal() {
+      const m = document.getElementById('modal-edit-ledger-entry');
+      if (m) m.classList.add('hidden');
+      editingLedgerEntryIndex = -1;
+    }
+
+    async function submitEditLedgerEntry() {
+      const cust = appData.customers.find(c => c.id === appData.activeCustomerId);
+      if (!cust || editingLedgerEntryIndex < 0 || !cust.ledger[editingLedgerEntryIndex]) return;
+
+      const idx = editingLedgerEntryIndex;
+      const entry = cust.ledger[idx];
+      const dateVal = document.getElementById('edit-entry-date').value.trim() || entry.date;
+      const invVal = parseFloat(document.getElementById('edit-entry-inv').value) || 0;
+      const paidVal = parseFloat(document.getElementById('edit-entry-paid').value) || 0;
+      const currVal = document.getElementById('edit-entry-currency').value || appData.currentCurrency;
+      const methodVal = document.getElementById('edit-entry-method').value || 'Cash';
+      const yardVal = document.getElementById('edit-entry-yard').value || cust.defaultYard;
+      const memoVal = document.getElementById('edit-entry-memo').value.trim() || (paidVal > 0 ? 'Cash paid to customer' : 'Unpaid amount added');
+
+      entry.date = dateVal;
+      entry.invoice = invVal;
+      entry.paid = paidVal;
+      entry.currency = currVal;
+      entry.method = methodVal;
+      entry.yard = yardVal;
+      entry.memo = memoVal;
+
+      let running = 0;
+      cust.ledger.forEach(item => {
+        running = Math.round((running + (Number(item.invoice) || 0) - (Number(item.paid) || 0)) * 100) / 100;
+        item.runningBalance = running;
+      });
+      cust.balance = running;
+
+      closeEditLedgerEntryModal();
+      renderActiveCustomerLedger();
+      renderDashboard();
+      showToast('Ledger entry updated.');
+
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'updateLedgerEntry',
+            payload: {
+              customerId: cust.id,
+              entryIndex: idx,
+              date: dateVal,
+              invoice: invVal,
+              paid: paidVal,
+              currency: currVal,
+              method: methodVal,
+              yard: yardVal,
+              memo: memoVal,
+            }
+          })
+        });
+      } catch (e) {}
+    }
+
+    // Delete Ledger Entry Modal Handlers
+    let deletingLedgerEntryIndex = -1;
+
+    function confirmDeleteLedgerEntry(entryIndex) {
+      const cust = appData.customers.find(c => c.id === appData.activeCustomerId);
+      if (!cust || !cust.ledger || !cust.ledger[entryIndex]) return;
+      deletingLedgerEntryIndex = entryIndex;
+      const entry = cust.ledger[entryIndex];
+      const sym = entry.currency || appData.currentCurrency;
+
+      document.getElementById('delete-entry-preview-date').innerText = entry.date;
+      document.getElementById('delete-entry-preview-amount').innerText =
+        entry.invoice > 0 ? `+${formatMoney(entry.invoice, sym)} (Unpaid)` : `-${formatMoney(entry.paid, sym)} (Paid)`;
+      document.getElementById('delete-entry-preview-yard').innerText = `${entry.yard} • ${entry.method}`;
+      document.getElementById('delete-entry-preview-memo').innerText = entry.memo || '—';
+
+      document.getElementById('modal-delete-ledger-entry').classList.remove('hidden');
+    }
+
+    function closeDeleteLedgerEntryModal() {
+      const m = document.getElementById('modal-delete-ledger-entry');
+      if (m) m.classList.add('hidden');
+      deletingLedgerEntryIndex = -1;
+    }
+
+    async function executeDeleteLedgerEntry() {
+      const cust = appData.customers.find(c => c.id === appData.activeCustomerId);
+      if (!cust || deletingLedgerEntryIndex < 0 || !cust.ledger[deletingLedgerEntryIndex]) return;
+
+      const idx = deletingLedgerEntryIndex;
+      cust.ledger.splice(idx, 1);
+
+      let running = 0;
+      cust.ledger.forEach(item => {
+        running = Math.round((running + (Number(item.invoice) || 0) - (Number(item.paid) || 0)) * 100) / 100;
+        item.runningBalance = running;
+      });
+      cust.balance = running;
+
+      closeDeleteLedgerEntryModal();
+      renderActiveCustomerLedger();
+      renderDashboard();
+      showToast('Ledger entry deleted.');
+
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'deleteLedgerEntry',
+            payload: {
+              customerId: cust.id,
+              entryIndex: idx,
+            }
+          })
+        });
+      } catch (e) {}
+    }
+
+    // Consolidate Ledger Modal Handlers
+    function openConsolidateLedgerModal() {
+      const cust = appData.customers.find(c => c.id === appData.activeCustomerId);
+      if (!cust) return;
+      document.getElementById('consolidate-modal-cust-name').innerText = cust.name;
+      document.getElementById('consolidate-modal-cust-label').innerText = `${cust.name} (${cust.id})`;
+      document.getElementById('consolidate-modal-cust-balance').innerText = formatSignedBalance(cust.balance);
+      document.getElementById('modal-consolidate-ledger').classList.remove('hidden');
+    }
+
+    function closeConsolidateLedgerModal() {
+      const m = document.getElementById('modal-consolidate-ledger');
+      if (m) m.classList.add('hidden');
+    }
+
+    async function executeConsolidateLedger() {
+      const cust = appData.customers.find(c => c.id === appData.activeCustomerId);
+      if (!cust) return;
+      const bal = cust.balance;
+      const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      cust.ledger = [{
+        date: now,
+        invoice: bal > 0 ? bal : 0,
+        paid: bal < 0 ? Math.abs(bal) : 0,
+        currency: appData.currentCurrency || 'USD ($)',
+        method: bal < 0 ? 'Cash' : 'Unpaid Due',
+        yard: cust.defaultYard || 'North Yard',
+        memo: 'Opening balance consolidated from past logs',
+        runningBalance: bal
+      }];
+      cust.lastUpdate = now;
+      closeConsolidateLedgerModal();
+      showToast(`Past logs cleared. Balance ${formatSignedBalance(bal)} preserved.`);
+      renderActiveCustomerLedger();
+      renderDashboard();
+
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'consolidateCustomerBalance',
+            payload: { customerId: cust.id }
+          })
+        });
+      } catch (e) {}
+    }
+
+    // Settings Drawer Controls
+    const LOCAL_CURRENCIES_KEY = 'adm_currencies_v2';
+    const LOCAL_YARDS_KEY = 'adm_yards_v2';
+    let inlineEditingCurrencyIdx = -1;
+    let inlineEditingYardIdx = -1;
+
+    function saveCurrenciesBackup() {
+      try {
+        localStorage.setItem(
+          LOCAL_CURRENCIES_KEY,
+          JSON.stringify({
+            currencies: appData.currencies,
+            currentCurrency: appData.currentCurrency
+          })
+        );
+      } catch (e) {}
+    }
+
+    function loadCurrenciesBackup() {
+      try {
+        const raw = localStorage.getItem(LOCAL_CURRENCIES_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function openSettingsDrawer() {
+      const currBackup = loadCurrenciesBackup();
+      if (currBackup && Array.isArray(currBackup.currencies)) {
+        appData.currencies = currBackup.currencies;
+        if (currBackup.currentCurrency) appData.currentCurrency = currBackup.currentCurrency;
+      }
+      renderCurrenciesSettingsList();
+      renderYardsSettingsList();
+      document.getElementById('settings-drawer').classList.remove('hidden');
+    }
+
+    function closeSettingsDrawer() {
+      document.getElementById('settings-drawer').classList.add('hidden');
+    }
+
+    function renderCurrenciesSettingsList() {
+      const container = document.getElementById('currencies-list-container');
+      if (!container) return;
+      container.innerHTML = '';
+      if (!Array.isArray(appData.currencies)) {
+        appData.currencies = ['USD ($)'];
+      }
+      const list = appData.currencies;
+
+      if (list.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'text-xs text-slate-400 text-center py-2';
+        emptyDiv.innerText = 'No currencies configured. Click "+ Add New Currency" above.';
+        container.appendChild(emptyDiv);
+        return;
+      }
+
+      list.forEach((curr, idx) => {
+        const isActive = curr === appData.currentCurrency;
+        const div = document.createElement('div');
+        div.className = "flex items-center justify-between text-xs p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs gap-2";
+
+        if (inlineEditingCurrencyIdx === idx) {
+          const shortName = extractCurrencyShortName(curr);
+          const symbol = extractCurrencySymbol(curr);
+
+          const editContainer = document.createElement('div');
+          editContainer.className = 'flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2';
+
+          const codeInput = document.createElement('input');
+          codeInput.type = 'text';
+          codeInput.id = 'inline-edit-currency-code';
+          codeInput.value = shortName;
+          codeInput.placeholder = 'Short Name (e.g. USD)';
+          codeInput.className = 'w-full sm:w-28 px-2 py-1 bg-white border border-indigo-400 rounded text-xs text-slate-800 uppercase outline-none focus:ring-2 focus:ring-indigo-500 font-semibold';
+          codeInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              saveInlineEditCurrency(idx);
+            } else if (e.key === 'Escape') {
+              cancelInlineEditCurrency();
+            }
+          };
+
+          const symInput = document.createElement('input');
+          symInput.type = 'text';
+          symInput.id = 'inline-edit-currency-symbol';
+          symInput.value = symbol;
+          symInput.placeholder = 'Symbol (e.g. $)';
+          symInput.className = 'w-full sm:w-20 px-2 py-1 bg-white border border-indigo-400 rounded text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 font-semibold';
+          symInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              saveInlineEditCurrency(idx);
+            } else if (e.key === 'Escape') {
+              cancelInlineEditCurrency();
+            }
+          };
+
+          const btnWrap = document.createElement('div');
+          btnWrap.className = 'flex items-center gap-2';
+
+          const saveBtn = document.createElement('button');
+          saveBtn.type = 'button';
+          saveBtn.className = 'px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded text-xs cursor-pointer';
+          saveBtn.innerText = 'Save';
+          saveBtn.onclick = () => saveInlineEditCurrency(idx);
+
+          const cancelBtn = document.createElement('button');
+          cancelBtn.type = 'button';
+          cancelBtn.className = 'text-slate-400 hover:text-slate-600 font-medium text-xs cursor-pointer';
+          cancelBtn.innerText = 'Cancel';
+          cancelBtn.onclick = () => cancelInlineEditCurrency();
+
+          btnWrap.appendChild(saveBtn);
+          btnWrap.appendChild(cancelBtn);
+          editContainer.appendChild(codeInput);
+          editContainer.appendChild(symInput);
+          div.appendChild(editContainer);
+          div.appendChild(btnWrap);
+        } else {
+          const leftDiv = document.createElement('div');
+          leftDiv.className = 'flex items-center gap-2';
+          const nameBtn = document.createElement('button');
+          nameBtn.type = 'button';
+          nameBtn.className = 'font-bold text-slate-800 hover:text-indigo-600 text-left cursor-pointer';
+          nameBtn.innerText = curr;
+          nameBtn.onclick = () => setActiveCurrency(curr);
+          leftDiv.appendChild(nameBtn);
+
+          const rightDiv = document.createElement('div');
+          rightDiv.className = 'flex items-center gap-2 text-xs';
+
+          if (isActive) {
+            const activeBadge = document.createElement('span');
+            activeBadge.className = 'text-emerald-600 font-semibold';
+            activeBadge.innerText = 'Active';
+            rightDiv.appendChild(activeBadge);
+          } else {
+            const useBtn = document.createElement('button');
+            useBtn.type = 'button';
+            useBtn.className = 'text-indigo-600 hover:underline font-medium cursor-pointer';
+            useBtn.innerText = 'Use';
+            useBtn.onclick = () => setActiveCurrency(curr);
+            rightDiv.appendChild(useBtn);
+          }
+
+          const sep1 = document.createElement('span');
+          sep1.className = 'text-slate-300';
+          sep1.innerText = '|';
+          rightDiv.appendChild(sep1);
+
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.className = 'text-slate-500 hover:text-indigo-600 font-medium cursor-pointer';
+          editBtn.innerText = 'Edit';
+          editBtn.onclick = () => startInlineEditCurrency(idx);
+          rightDiv.appendChild(editBtn);
+
+          const sep2 = document.createElement('span');
+          sep2.className = 'text-slate-300';
+          sep2.innerText = '|';
+          rightDiv.appendChild(sep2);
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'text-rose-600 hover:underline font-medium cursor-pointer';
+          delBtn.innerText = 'Delete';
+          delBtn.onclick = () => removeCurrency(curr, idx);
+          rightDiv.appendChild(delBtn);
+
+          div.appendChild(leftDiv);
+          div.appendChild(rightDiv);
+        }
+
+        container.appendChild(div);
+      });
+    }
+
+    async function setActiveCurrency(curr) {
+      appData.currentCurrency = curr;
+      saveCurrenciesBackup();
+      renderCurrenciesSettingsList();
+      updateCurrencyDropdowns();
+      renderDashboard();
+      if (appData.currentView === 'ledger') renderActiveCustomerLedger();
+      showToast(`Active currency set to "${curr}"`);
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'updateSettings', payload: { currentCurrency: curr, newCurrency: curr } })
+        });
+      } catch (e) {}
+    }
+
+    function updateCurrencyDropdowns() {
+      const currencies = Array.isArray(appData.currencies) && appData.currencies.length > 0
+        ? appData.currencies
+        : ['USD ($)'];
+      const activeCurr = appData.currentCurrency || currencies[0];
+
+      const inlineSelect = document.getElementById('inline-entry-currency');
+      if (inlineSelect) {
+        const curVal = inlineSelect.value || activeCurr;
+        inlineSelect.innerHTML = '';
+        currencies.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.innerText = c;
+          if (c === curVal || (!currencies.includes(curVal) && c === activeCurr)) {
+            opt.selected = true;
+          }
+          inlineSelect.appendChild(opt);
+        });
+      }
+
+      const modalSelect = document.getElementById('input-entry-currency');
+      if (modalSelect) {
+        const curVal = modalSelect.value || activeCurr;
+        modalSelect.innerHTML = '';
+        currencies.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.innerText = c;
+          if (c === curVal || (!currencies.includes(curVal) && c === activeCurr)) {
+            opt.selected = true;
+          }
+          modalSelect.appendChild(opt);
+        });
+      }
+
+      updateCurrencyPlaceholders();
+    }
+
+    function updateCurrencyPlaceholders() {
+      const inlineSelect = document.getElementById('inline-entry-currency');
+      const selectedInlineCurr = inlineSelect ? inlineSelect.value : (appData.currentCurrency || 'USD ($)');
+      const inlineSymbol = extractCurrencySymbol(selectedInlineCurr);
+
+      const inlineInv = document.getElementById('inline-entry-inv');
+      if (inlineInv) inlineInv.placeholder = `+ Unpaid Total (${inlineSymbol})`;
+      const inlinePaid = document.getElementById('inline-entry-paid');
+      if (inlinePaid) inlinePaid.placeholder = `- Paid to Customer (${inlineSymbol})`;
+
+      const modalSelect = document.getElementById('input-entry-currency');
+      const selectedModalCurr = modalSelect ? modalSelect.value : (appData.currentCurrency || 'USD ($)');
+      const modalSymbol = extractCurrencySymbol(selectedModalCurr);
+      const modalAmtLabel = document.getElementById('label-entry-amount');
+      if (modalAmtLabel) modalAmtLabel.innerText = `Amount (${modalSymbol}) *`;
+      const modalAmtInput = document.getElementById('input-entry-amount');
+      if (modalAmtInput) modalAmtInput.placeholder = `0.00 (${modalSymbol})`;
+    }
+
+    function promptAddCurrency() {
+      const bar = document.getElementById('inline-add-currency-bar');
+      const codeInp = document.getElementById('inline-new-currency-code');
+      const symInp = document.getElementById('inline-new-currency-symbol');
+      if (bar) {
+        bar.classList.toggle('hidden');
+        if (!bar.classList.contains('hidden')) {
+          if (codeInp) {
+            codeInp.value = '';
+            codeInp.focus();
+          }
+          if (symInp) symInp.value = '';
+        }
+      }
+    }
+
+    function cancelInlineAddCurrency() {
+      const bar = document.getElementById('inline-add-currency-bar');
+      const codeInp = document.getElementById('inline-new-currency-code');
+      const symInp = document.getElementById('inline-new-currency-symbol');
+      if (codeInp) codeInp.value = '';
+      if (symInp) symInp.value = '';
+      if (bar) bar.classList.add('hidden');
+    }
+
+    async function submitInlineAddCurrency() {
+      const codeInp = document.getElementById('inline-new-currency-code');
+      const symInp = document.getElementById('inline-new-currency-symbol');
+      const shortName = (codeInp ? codeInp.value : '').trim().toUpperCase();
+      const symbol = (symInp ? symInp.value : '').trim();
+      if (!shortName || !symbol) {
+        showToast('Please enter both Short Name (e.g. EUR) and Symbol (e.g. €).');
+        return;
+      }
+      const formatted = buildCurrencyLabel(shortName, symbol);
+      if (!Array.isArray(appData.currencies)) appData.currencies = [];
+      if (!appData.currencies.includes(formatted)) {
+        appData.currencies.push(formatted);
+      }
+      appData.currentCurrency = formatted;
+      saveCurrenciesBackup();
+      cancelInlineAddCurrency();
+      renderCurrenciesSettingsList();
+      updateCurrencyDropdowns();
+      renderDashboard();
+      if (appData.currentView === 'ledger') renderActiveCustomerLedger();
+      showToast(`Currency "${formatted}" added.`);
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'addCurrency', payload: { shortName, symbol, name: formatted } })
+        });
+      } catch (e) {}
+    }
+
+    function startInlineEditCurrency(idx) {
+      inlineEditingCurrencyIdx = idx;
+      renderCurrenciesSettingsList();
+      const inp = document.getElementById('inline-edit-currency-code');
+      if (inp) inp.focus();
+    }
+
+    function cancelInlineEditCurrency() {
+      inlineEditingCurrencyIdx = -1;
+      renderCurrenciesSettingsList();
+    }
+
+    async function saveInlineEditCurrency(idx) {
+      const codeInp = document.getElementById('inline-edit-currency-code');
+      const symInp = document.getElementById('inline-edit-currency-symbol');
+      const shortName = (codeInp ? codeInp.value : '').trim().toUpperCase();
+      const symbol = (symInp ? symInp.value : '').trim();
+      if (!shortName || !symbol) {
+        showToast('Please enter both Short Name (e.g. USD) and Symbol (e.g. $).');
+        return;
+      }
+      const oldName = appData.currencies[idx];
+      const trimmed = buildCurrencyLabel(shortName, symbol);
+      appData.currencies[idx] = trimmed;
+      if (appData.currentCurrency === oldName) {
+        appData.currentCurrency = trimmed;
+      }
+      inlineEditingCurrencyIdx = -1;
+      saveCurrenciesBackup();
+      renderCurrenciesSettingsList();
+      updateCurrencyDropdowns();
+      renderDashboard();
+      if (appData.currentView === 'ledger') renderActiveCustomerLedger();
+      showToast(`Currency updated to "${trimmed}"`);
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'renameCurrency', payload: { oldName, newName: trimmed, shortName, symbol } })
+        });
+      } catch (e) {}
+    }
+
+    function editCurrency(oldName) {
+      const idx = Array.isArray(appData.currencies) ? appData.currencies.indexOf(oldName) : -1;
+      if (idx !== -1) startInlineEditCurrency(idx);
+    }
+
+    async function removeCurrency(name, idx) {
+      if (!Array.isArray(appData.currencies)) return;
+      if (typeof idx === 'number' && idx >= 0) {
+        appData.currencies.splice(idx, 1);
+      } else {
+        appData.currencies = appData.currencies.filter(c => c !== name);
+      }
+      if (appData.currentCurrency === name) {
+        appData.currentCurrency = appData.currencies[0] || 'USD ($)';
+      }
+      inlineEditingCurrencyIdx = -1;
+      saveCurrenciesBackup();
+      renderCurrenciesSettingsList();
+      updateCurrencyDropdowns();
+      renderDashboard();
+      if (appData.currentView === 'ledger') renderActiveCustomerLedger();
+      showToast(`Currency "${name}" deleted.`);
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'removeCurrency', payload: { name } })
+        });
+      } catch (e) {}
+    }
+
+    function renderYardsSettingsList() {
+      const container = document.getElementById('yards-list-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      appData.yards.forEach((yard, idx) => {
+        const div = document.createElement('div');
+        div.className = "flex items-center justify-between text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl gap-2";
+
+        if (inlineEditingYardIdx === idx) {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.id = 'inline-edit-yard-input';
+          input.value = yard;
+          input.className = 'flex-1 px-2 py-1 bg-white border border-indigo-400 rounded text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500';
+          input.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              saveInlineEditYard(idx);
+            } else if (e.key === 'Escape') {
+              cancelInlineEditYard();
+            }
+          };
+
+          const btnWrap = document.createElement('div');
+          btnWrap.className = 'flex items-center gap-2';
+
+          const saveBtn = document.createElement('button');
+          saveBtn.type = 'button';
+          saveBtn.className = 'px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded text-xs cursor-pointer';
+          saveBtn.innerText = 'Save';
+          saveBtn.onclick = () => saveInlineEditYard(idx);
+
+          const cancelBtn = document.createElement('button');
+          cancelBtn.type = 'button';
+          cancelBtn.className = 'text-slate-400 hover:text-slate-600 font-medium text-xs cursor-pointer';
+          cancelBtn.innerText = 'Cancel';
+          cancelBtn.onclick = () => cancelInlineEditYard();
+
+          btnWrap.appendChild(saveBtn);
+          btnWrap.appendChild(cancelBtn);
+          div.appendChild(input);
+          div.appendChild(btnWrap);
+        } else {
+          const isDefault = yard === (appData.defaultYard || appData.yards[0]);
+          const leftDiv = document.createElement('div');
+          leftDiv.className = 'flex items-center gap-2 font-medium text-slate-800';
+          leftDiv.innerHTML = '<svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>';
+          
+          const nameBtn = document.createElement('button');
+          nameBtn.type = 'button';
+          nameBtn.className = 'font-bold text-slate-800 hover:text-indigo-600 text-left cursor-pointer';
+          nameBtn.innerText = yard;
+          nameBtn.onclick = () => setDefaultYard(yard);
+          leftDiv.appendChild(nameBtn);
+
+          const rightDiv = document.createElement('div');
+          rightDiv.className = 'flex items-center gap-2 text-xs';
+
+          if (isDefault) {
+            const defaultBadge = document.createElement('span');
+            defaultBadge.className = 'text-emerald-600 font-semibold';
+            defaultBadge.innerText = 'Default';
+            rightDiv.appendChild(defaultBadge);
+          } else {
+            const useBtn = document.createElement('button');
+            useBtn.type = 'button';
+            useBtn.className = 'text-indigo-600 hover:underline font-medium cursor-pointer';
+            useBtn.innerText = 'Set Default';
+            useBtn.onclick = () => setDefaultYard(yard);
+            rightDiv.appendChild(useBtn);
+          }
+
+          const sep1 = document.createElement('span');
+          sep1.className = 'text-slate-300';
+          sep1.innerText = '|';
+          rightDiv.appendChild(sep1);
+
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.className = 'text-slate-500 hover:text-indigo-600 font-medium cursor-pointer';
+          editBtn.innerText = 'Edit';
+          editBtn.onclick = () => startInlineEditYard(idx);
+          rightDiv.appendChild(editBtn);
+
+          const sep2 = document.createElement('span');
+          sep2.className = 'text-slate-300';
+          sep2.innerText = '|';
+          rightDiv.appendChild(sep2);
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'text-rose-600 hover:underline font-medium cursor-pointer';
+          delBtn.innerText = 'Remove';
+          delBtn.onclick = () => removeYard(yard, idx);
+          rightDiv.appendChild(delBtn);
+
+          div.appendChild(leftDiv);
+          div.appendChild(rightDiv);
+        }
+
+        container.appendChild(div);
+      });
+    }
+
+    function promptAddYard() {
+      const bar = document.getElementById('inline-add-yard-bar');
+      const inp = document.getElementById('inline-new-yard-input');
+      if (bar) {
+        bar.classList.toggle('hidden');
+        if (!bar.classList.contains('hidden') && inp) {
+          inp.value = '';
+          inp.focus();
+        }
+      }
+    }
+
+    function cancelInlineAddYard() {
+      const bar = document.getElementById('inline-add-yard-bar');
+      const inp = document.getElementById('inline-new-yard-input');
+      if (inp) inp.value = '';
+      if (bar) bar.classList.add('hidden');
+    }
+
+    async function submitInlineAddYard() {
+      const inp = document.getElementById('inline-new-yard-input');
+      const trimmed = (inp ? inp.value : '').trim();
+      if (!trimmed) {
+        showToast('Please enter a yard location name.');
+        return;
+      }
+      if (!appData.yards.includes(trimmed)) {
+        appData.yards.push(trimmed);
+      }
+      cancelInlineAddYard();
+      renderYardsSettingsList();
+      updateYardDropdowns();
+      showToast(`Yard "${trimmed}" added.`);
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'addYard', payload: { name: trimmed } })
+        });
+      } catch (e) {}
+    }
+
+    function startInlineEditYard(idx) {
+      inlineEditingYardIdx = idx;
+      renderYardsSettingsList();
+      const inp = document.getElementById('inline-edit-yard-input');
+      if (inp) inp.focus();
+    }
+
+    function cancelInlineEditYard() {
+      inlineEditingYardIdx = -1;
+      renderYardsSettingsList();
+    }
+
+    async function saveInlineEditYard(idx) {
+      const inp = document.getElementById('inline-edit-yard-input');
+      const trimmed = (inp ? inp.value : '').trim();
+      if (!trimmed) {
+        showToast('Yard name cannot be empty.');
+        return;
+      }
+      const oldName = appData.yards[idx];
+      appData.yards[idx] = trimmed;
+      inlineEditingYardIdx = -1;
+      renderYardsSettingsList();
+      updateYardDropdowns();
+      showToast(`Yard updated to "${trimmed}"`);
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'renameYard', payload: { oldName, newName: trimmed } })
+        });
+      } catch (e) {}
+    }
+
+    function editYard(yardName) {
+      const idx = appData.yards.indexOf(yardName);
+      if (idx !== -1) startInlineEditYard(idx);
+    }
+
+    async function setDefaultYard(yardName) {
+      appData.defaultYard = yardName;
+      renderYardsSettingsList();
+      updateYardDropdowns();
+      renderDashboard();
+      if (appData.currentView === 'ledger') renderActiveCustomerLedger();
+      showToast(`Default Yard Location set to "${yardName}"`);
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'setDefaultYard', payload: { yard: yardName } })
+        });
+      } catch (e) {}
+    }
+
+    async function removeYard(yardName, idx) {
+      if (appData.yards.length <= 1) {
+        showToast('You must keep at least one active yard.');
+        return;
+      }
+      if (typeof idx === 'number' && idx >= 0) {
+        appData.yards.splice(idx, 1);
+      } else {
+        appData.yards = appData.yards.filter(y => y !== yardName);
+      }
+      if (appData.defaultYard === yardName) {
+        appData.defaultYard = appData.yards[0] || 'North Yard';
+      }
+      inlineEditingYardIdx = -1;
+      renderYardsSettingsList();
+      updateYardDropdowns();
+      showToast(`Yard "${yardName}" removed.`);
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'removeYard', payload: { name: yardName } })
+        });
+      } catch (e) {}
+    }
+
+    function getAvailableFilterYards() {
+      const yardSet = new Set(appData.yards || []);
+      (appData.customers || []).forEach(cust => {
+        if (cust.defaultYard && cust.defaultYard.trim()) {
+          yardSet.add(cust.defaultYard.trim());
+        }
+        if (Array.isArray(cust.ledger)) {
+          cust.ledger.forEach(entry => {
+            if (entry.yard && entry.yard.trim()) {
+              yardSet.add(entry.yard.trim());
+            }
+          });
+        }
+      });
+      return Array.from(yardSet);
+    }
+
+    function updateYardDropdowns() {
+      const filterSelect = document.getElementById('ledger-yard-filter');
+      const custYardSelect = document.getElementById('input-customer-yard');
+      const entryYardSelect = document.getElementById('input-entry-yard');
+      const sheetYardSelect = document.getElementById('sheet-yard-select');
+      const quickAddCustYardSelect = document.getElementById('quick-add-cust-yard');
+      const inlineEntryYardSelect = document.getElementById('inline-entry-yard');
+
+      // Active yards only for new customer/entry forms
+      const activeOptions = (appData.yards || []).map(y => `<option value="${y}">${y}</option>`).join('');
+
+      // All available yards (including yards present in past customer records/ledgers) for filter dropdowns
+      const filterYards = getAvailableFilterYards();
+      const currentSheetFilter = sheetYardSelect ? sheetYardSelect.value : 'ALL';
+      const currentLedgerFilter = filterSelect ? filterSelect.value : 'ALL';
+
+      const filterOptions = '<option value="ALL">All Yards</option>' + filterYards.map(y => `<option value="${y}">${y}</option>`).join('');
+
+      if (filterSelect) {
+        filterSelect.innerHTML = filterOptions;
+        if (filterYards.includes(currentLedgerFilter) || currentLedgerFilter === 'ALL') {
+          filterSelect.value = currentLedgerFilter;
+        }
+      }
+      if (sheetYardSelect) {
+        sheetYardSelect.innerHTML = filterOptions;
+        if (filterYards.includes(currentSheetFilter) || currentSheetFilter === 'ALL') {
+          sheetYardSelect.value = currentSheetFilter;
+        }
+      }
+
+      const defaultY = appData.defaultYard || (appData.yards && appData.yards[0]) || 'North Yard';
+      const activeCust = Array.isArray(appData.customers) ? appData.customers.find(c => c.id === appData.activeCustomerId) : null;
+      const ledgerEntryYard = (activeCust && activeCust.defaultYard) || defaultY;
+
+      if (custYardSelect) {
+        custYardSelect.innerHTML = activeOptions;
+        custYardSelect.value = defaultY;
+      }
+      if (quickAddCustYardSelect) {
+        quickAddCustYardSelect.innerHTML = activeOptions;
+        quickAddCustYardSelect.value = defaultY;
+      }
+      if (entryYardSelect) {
+        entryYardSelect.innerHTML = activeOptions;
+        entryYardSelect.value = ledgerEntryYard;
+      }
+      if (inlineEntryYardSelect) {
+        inlineEntryYardSelect.innerHTML = activeOptions;
+        inlineEntryYardSelect.value = ledgerEntryYard;
+      }
+    }
+
+    function simulateDbAction(action) {
+      if (action === 'load-sql' || action === 'load-xlsx') {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = action === 'load-xlsx' ? '.csv,.xlsx,.xls' : '.sql,.json,.bak';
+        input.onchange = async (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          try {
+            const isXlsx = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls');
+            let content = '';
+            if (isXlsx) {
+              content = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result || ''));
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(file);
+              });
+            } else {
+              content = await file.text();
+            }
+
+            const res = await fetch('/api/ledger', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'importBackup', payload: { content, fileName: file.name } })
+            });
+            const data = await res.json();
+            if (data.ok && data.state) {
+              appData.customers = data.state.customers || [];
+              appData.yards = data.state.yards || appData.yards;
+              if (data.state.currencies) appData.currencies = data.state.currencies;
+              if (data.state.currentCurrency) appData.currentCurrency = data.state.currentCurrency;
+              if (appData.customers.length > 0) {
+                appData.activeCustomerId = appData.customers[0].id;
+              }
+              showToast(`Loaded "${file.name}" into encrypted SQLite database.`);
+              renderDashboard();
+            } else {
+              showToast(data.error || 'Failed to import file', 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast(`Loaded "${file.name}" into local database.`);
+          }
+        };
+        input.click();
+      } else if (action === 'download-db') {
+        const element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(JSON.stringify(appData, null, 2)));
+        element.setAttribute('download', `customer_balance_dump_${Date.now()}.json`);
+        element.style.display = 'none';
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+        showToast('Database dump downloaded.');
+      } else if (action === 'delete-db') {
+        const box = document.getElementById('inline-delete-db-box');
+        const inp = document.getElementById('inline-delete-db-input');
+        if (box) {
+          box.classList.toggle('hidden');
+          if (!box.classList.contains('hidden') && inp) {
+            inp.value = '';
+            inp.focus();
+          }
+        }
+      }
+    }
+
+    async function executeInlineDeleteDb() {
+      const inp = document.getElementById('inline-delete-db-input');
+      const typed = (inp ? inp.value : '').trim();
+      if (typed.toLowerCase() !== 'delete') {
+        showToast('Please type "delete" to confirm wiping the database.');
+        return;
+      }
+      appData.customers = [];
+      try {
+        await fetch('/api/ledger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'clearDatabase', payload: { confirmation: 'delete' } })
+        });
+      } catch (e) {}
+      const box = document.getElementById('inline-delete-db-box');
+      if (box) box.classList.add('hidden');
+      closeSettingsDrawer();
+      switchView('sheet');
+      renderDashboard();
+      showToast('Database deleted successfully.');
+    }
+
+    const UI_TRANSLATIONS = {
+      en: {
+        dir: 'ltr',
+        tabDirectory: 'Customer Directory',
+        tabSheet: 'View Balance Sheet',
+        addCustomer: 'Add Customer',
+        sheetHeading: 'Consolidated Balance Sheet',
+        directoryHeading: 'Customer Account Directory',
+        deleteAccount: 'Delete Account'
+      }
+    };
+
+    function applyLanguageTranslations(lang) {
+      const code = 'en';
+      appData.language = code;
+      const t = UI_TRANSLATIONS[code];
+      document.documentElement.dir = t.dir;
+      document.documentElement.lang = code;
+
+      const selectEl = document.getElementById('system-language');
+      if (selectEl && selectEl.value !== code) {
+        selectEl.value = code;
+      }
+
+      const tabDir = document.getElementById('nav-tab-directory');
+      const tabSheet = document.getElementById('nav-tab-sheet');
+      if (tabDir) tabDir.innerText = t.tabDirectory;
+      if (tabSheet) tabSheet.innerText = t.tabSheet;
+
+      const addBtn = document.querySelector('[data-purpose="add-customer-trigger"]');
+      if (addBtn) {
+        addBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg> ${t.addCustomer}`;
+      }
+    }
+
+    function notifyLanguageChange() {
+      const lang = document.getElementById('system-language').value || 'en';
+      applyLanguageTranslations(lang);
+      showToast('Language set to English');
+    }
+
+    function exportSheetToCSV() {
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "Customer ID,Customer Name,Yard,Current Balance,Position Status,Last Updated\n";
+      appData.customers.forEach(c => {
+        const pos = c.balance > 0 ? "We Owe Customer" : (c.balance < 0 ? "Advance Given" : "Settled");
+        csvContent += `"${c.id}","${c.name}","${c.defaultYard}","${c.balance}","${pos}","${c.lastUpdate}"\n`;
+      });
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "balance_sheet_report.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Balance Sheet exported to CSV");
+    }
+
+    function printLedgerSheet() {
+      window.print();
+    }
+
+    function renderDashboard() {
+      renderAllSheetsTable();
+      renderCustomersTable();
+      renderCurrenciesSettingsList();
+      renderYardsSettingsList();
+    }
+
+    // Initialize application on page load
+    const primaryHandleSetupPasscode = handleSetupPasscode;
+    const primaryHandleLogin = handleLogin;
+    const primaryPromptAddCurrency = promptAddCurrency;
+    const primaryEditCurrency = editCurrency;
+    const primaryRemoveCurrency = removeCurrency;
+    const primarySetActiveCurrency = setActiveCurrency;
+    const primaryPromptAddYard = promptAddYard;
+    const primaryEditYard = editYard;
+    const primaryRemoveYard = removeYard;
+
+    let consecutiveHeartbeatFailures = 0;
+    let heartbeatActive = true;
+
+    function triggerUsbDisconnectLockout() {
+      if (!heartbeatActive) return;
+      heartbeatActive = false;
+      if (typeof appData !== 'undefined') {
+        appData.customers = [];
+      }
+      document.body.innerHTML = `
+        <div style="position:fixed;inset:0;background:#0f172a;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:24px;">
+          <div style="width:68px;height:68px;border-radius:50%;background:#ef4444;display:flex;align-items:center;justify-content:center;margin-bottom:20px;box-shadow:0 0 25px rgba(239,68,68,0.5);">
+            <svg style="width:38px;height:38px;color:white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+          <h1 style="font-size:26px;font-weight:800;margin-bottom:10px;color:#f87171;letter-spacing:-0.5px;">USB Drive Disconnected</h1>
+          <p style="font-size:14px;color:#94a3b8;max-width:440px;line-height:1.5;margin-bottom:24px;">The encrypted USB storage device has been disconnected. The database has been cleanly flushed and closed. This application window is closing for security.</p>
+          <button onclick="try{window.close();}catch(e){}window.location.replace('about:blank');" style="padding:10px 24px;background:#334155;color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.3);">Close Window</button>
+        </div>
+      `;
+      try {
+        window.close();
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          window.location.replace('about:blank');
+        } catch (e) {}
+      }, 1000);
+    }
+
+    window.triggerUsbDisconnectLockout = triggerUsbDisconnectLockout;
+
+    async function checkUsbHeartbeat() {
+      if (!heartbeatActive) return;
+      try {
+        const res = await fetch('/api/heartbeat', { cache: 'no-store' });
+        if (res.status === 410) {
+          triggerUsbDisconnectLockout();
+          return;
+        }
+        const json = await res.json();
+        if (!json || json.connected === false) {
+          triggerUsbDisconnectLockout();
+          return;
+        }
+        consecutiveHeartbeatFailures = 0;
+      } catch (err) {
+        consecutiveHeartbeatFailures++;
+        if (consecutiveHeartbeatFailures >= 2) {
+          triggerUsbDisconnectLockout();
+        }
+      }
+    }
+
+    setInterval(checkUsbHeartbeat, 1500);
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const passInput = document.getElementById('password-input');
+      if (passInput) passInput.value = '';
+      const dateInput = document.getElementById('inline-entry-date');
+      if (dateInput) {
+        dateInput.value = new Date().toISOString().slice(0, 10);
+      }
+      const currBackup = loadCurrenciesBackup();
+      if (currBackup && Array.isArray(currBackup.currencies)) {
+        appData.currencies = currBackup.currencies;
+        if (currBackup.currentCurrency) appData.currentCurrency = currBackup.currentCurrency;
+      }
+      updateAuthModalUI();
+      updateYardDropdowns();
+      updateCurrencyDropdowns();
+      renderDashboard();
+    });
+
+    window.addEventListener('load', () => {
+      window.handleSetupPasscode = primaryHandleSetupPasscode;
+      window.handleLogin = primaryHandleLogin;
+      window.copySetupRecoveryCodes = copySetupRecoveryCodes;
+      window.showForgotPasswordForm = showForgotPasswordForm;
+      window.showLoginForm = showLoginForm;
+      window.handleRecoverPasscode = handleRecoverPasscode;
+      window.promptAddCurrency = primaryPromptAddCurrency;
+      window.editCurrency = primaryEditCurrency;
+      window.removeCurrency = primaryRemoveCurrency;
+      window.setActiveCurrency = primarySetActiveCurrency;
+      window.updateCurrencyDropdowns = updateCurrencyDropdowns;
+      window.updateCurrencyPlaceholders = updateCurrencyPlaceholders;
+      window.promptAddYard = primaryPromptAddYard;
+      window.editYard = primaryEditYard;
+      window.removeYard = primaryRemoveYard;
+      window.openEditCustomerModal = openEditCustomerModal;
+      window.closeEditCustomerModal = closeEditCustomerModal;
+      window.submitEditCustomer = submitEditCustomer;
+      window.openEditLedgerEntryModal = openEditLedgerEntryModal;
+      window.closeEditLedgerEntryModal = closeEditLedgerEntryModal;
+      window.submitEditLedgerEntry = submitEditLedgerEntry;
+      window.confirmDeleteLedgerEntry = confirmDeleteLedgerEntry;
+      window.closeDeleteLedgerEntryModal = closeDeleteLedgerEntryModal;
+      window.executeDeleteLedgerEntry = executeDeleteLedgerEntry;
+      const passInput = document.getElementById('password-input');
+      if (passInput) passInput.value = '';
+      const currBackup = loadCurrenciesBackup();
+      if (currBackup && Array.isArray(currBackup.currencies)) {
+        appData.currencies = currBackup.currencies;
+        if (currBackup.currentCurrency) appData.currentCurrency = currBackup.currentCurrency;
+      }
+      updateAuthModalUI();
+      updateCurrencyDropdowns();
+      renderCurrenciesSettingsList();
+      renderYardsSettingsList();
+    });
+  </script>
+<!-- END: ApplicationLogic -->
+
+
+</body></html>

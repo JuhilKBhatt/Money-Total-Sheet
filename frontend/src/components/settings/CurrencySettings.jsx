@@ -4,7 +4,7 @@ import { Input, Button, Modal, message, List, Popconfirm, Form } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export default function CurrencySettings() {
   const [currencies, setCurrencies] = useState([]);

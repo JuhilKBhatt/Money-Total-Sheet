@@ -3,11 +3,12 @@ import React from 'react';
 import { Collapse, Typography } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 
-// Import our new sub-components
 import CompanySettings from '../components/settings/CompanySettings';
 import YardSettings from '../components/settings/YardSettings';
 import CurrencySettings from '../components/settings/CurrencySettings';
 import UnitSettings from '../components/settings/UnitSettings';
+import SecuritySettings from '../components/settings/SecuritySettings';
+import BackupSettings from '../components/settings/BackupSettings';
 
 const { Panel } = Collapse;
 const { Text } = Typography;
@@ -34,6 +35,14 @@ export default function Settings({ companies, fetchCompanies }) {
 
         <Panel header={headerText("Weight Units")} key="4">
           <UnitSettings />
+        </Panel>
+
+        <Panel header={headerText("Security, Password & Recovery Codes")} key="5">
+          <SecuritySettings />
+        </Panel>
+
+        <Panel header={headerText("Encrypted Database Backup & Restore")} key="6">
+          <BackupSettings fetchCompanies={fetchCompanies} />
         </Panel>
       </Collapse>
     </div>
