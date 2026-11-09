@@ -4,7 +4,11 @@ import { Table, Typography, Space, Button, Popconfirm } from 'antd';
 
 const { Text } = Typography;
 
-const formatMoney = (val) => Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const formatMoney = (val) => {
+  const num = Number(val) || 0;
+  const clean = Math.abs(num) < 0.005 ? 0 : num;
+  return clean.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 const formatWeight = (val) => Number(val).toLocaleString('en-US');
 
 export default function LedgerTable({ 
@@ -40,7 +44,7 @@ export default function LedgerTable({
     {
       title: 'Price', dataIndex: 'price', key: 'price', width: 100,
       onCell: (record) => ({ colSpan: (record.type === 'balance' || record.type === 'deduction') ? 0 : 1 }),
-      render: (val, record) => (!val) ? '' : `${record.currency}${formatMoney(val)}`
+      render: (val, record) => (val === '' || val === null || val === undefined) ? '' : `${record.currency}${formatMoney(val)}`
     },
     {
       title: 'Total', dataIndex: 'total', key: 'total', width: 120,
@@ -133,7 +137,7 @@ export default function LedgerTable({
                   <Text strong style={{ fontSize: '18px', color: '#000' }}>Remaining Balance ({curr}):</Text>
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={1} colSpan={2}>
-                  <Text strong type={grandTotals[curr] < 0 ? "danger" : "success"} style={{ fontSize: '18px' }}>
+                  <Text strong type={grandTotals[curr] < -0.005 ? "danger" : "success"} style={{ fontSize: '18px' }}>
                     {curr}{formatMoney(grandTotals[curr])}
                   </Text>
                 </Table.Summary.Cell>

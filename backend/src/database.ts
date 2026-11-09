@@ -1276,6 +1276,302 @@ export function parseCsvCustomerAccounts(
   return customers;
 }
 
+function unescapePgCopyField(val: string): string | null {
+  if (val === '\\N') return null;
+  return val
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t')
+    .replace(/\\\\/g, '\\');
+}
+
+function parseSqlValueTokens(tupleBody: string): Array<string | null> {
+  const values: Array<string | null> = [];
+  let i = 0;
+  const n = tupleBody.length;
+
+  while (i < n) {
+    while (i < n && /\s/.test(tupleBody[i])) i++;
+    if (i >= n) break;
+
+    if (tupleBody[i] === "'") {
+      i++;
+      let strVal = '';
+      while (i < n) {
+        if (tupleBody[i] === "'" && tupleBody[i + 1] === "'") {
+          strVal += "'";
+          i += 2;
+        } else if (tupleBody[i] === '\\' && i + 1 < n) {
+          const next = tupleBody[i + 1];
+          if (next === 'n') strVal += '\n';
+          else if (next === 'r') strVal += '\r';
+          else if (next === 't') strVal += '\t';
+          else strVal += next;
+          i += 2;
+        } else if (tupleBody[i] === "'") {
+          i++;
+          break;
+        } else {
+          strVal += tupleBody[i++];
+        }
+      }
+      values.push(strVal);
+      while (i < n && tupleBody[i] !== ',') i++;
+      if (tupleBody[i] === ',') i++;
+    } else {
+      const start = i;
+      while (i < n && tupleBody[i] !== ',') i++;
+      const rawToken = tupleBody.slice(start, i).trim();
+      if (tupleBody[i] === ',') i++;
+      if (rawToken.toUpperCase() === 'NULL') {
+        values.push(null);
+      } else {
+        values.push(rawToken);
+      }
+    }
+  }
+  return values;
+}
+
+export function isSqlDumpContent(content: string, fileName?: string): boolean {
+  if (fileName && fileName.toLowerCase().endsWith('.sql')) {
+    return true;
+  }
+  const head = content.slice(0, 4000);
+  return (
+    /COPY\s+(?:public\.)?[a-zA-Z0-9_]+\s*\(/i.test(head) ||
+    /INSERT\s+INTO\s+(?:public\.)?[a-zA-Z0-9_]+/i.test(head) ||
+    head.includes('PostgreSQL database dump') ||
+    /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:public\.)?[a-zA-Z0-9_]+/i.test(head)
+  );
+}
+
+export function parseSqlDumpDataset(sqlText: string): {
+  companies: CompanyRecord[];
+  pickups: PickupRecord[];
+  deductions: DeductionRecord[];
+  yards: YardOptionRecord[];
+  currencies: CurrencyOptionRecord[];
+  units: UnitOptionRecord[];
+} {
+  const tableRows: Record<string, Array<Record<string, string | null>>> = {
+    companies: [],
+    pickups: [],
+    metal_items: [],
+    deductions: [],
+    yard_options: [],
+    currency_options: [],
+    unit_options: [],
+  };
+
+  const normalizeTableName = (rawName: string): string => {
+    const clean = rawName
+      .replace(/^public\./i, '')
+      .replace(/["`]/g, '')
+      .trim()
+      .toLowerCase();
+    if (clean === 'yards') return 'yard_options';
+    if (clean === 'currencies') return 'currency_options';
+    if (clean === 'units') return 'unit_options';
+    return clean;
+  };
+
+  // 1. Parse PostgreSQL COPY blocks: COPY public.<table> (<cols>) FROM stdin; ... \.
+  const copyRegex = /COPY\s+([^\s(]+)\s*\(([^)]+)\)\s+FROM\s+stdin\s*;([\s\S]*?)^\s*\\?\.\s*$/gim;
+  let copyMatch: RegExpExecArray | null;
+  while ((copyMatch = copyRegex.exec(sqlText)) !== null) {
+    const tableName = normalizeTableName(copyMatch[1]);
+    if (!tableRows[tableName]) continue;
+    const cols = copyMatch[2].split(',').map((c) => c.replace(/["`]/g, '').trim().toLowerCase());
+    const bodyLines = copyMatch[3].split(/\r?\n/);
+    for (const line of bodyLines) {
+      if (!line || !line.trim()) continue;
+      const parts = line.split('\t');
+      const rowObj: Record<string, string | null> = {};
+      cols.forEach((col, idx) => {
+        rowObj[col] = idx < parts.length ? unescapePgCopyField(parts[idx]) : null;
+      });
+      tableRows[tableName].push(rowObj);
+    }
+  }
+
+  // 2. Parse SQL INSERT INTO statements: INSERT INTO [public.]<table> [(<cols>)] VALUES (...), (...);
+  const insertRegex = /INSERT\s+INTO\s+([^\s(]+)\s*(?:\(([^)]+)\))?\s*VALUES\s*([\s\S]*?);/gi;
+  let insertMatch: RegExpExecArray | null;
+  const defaultColsByTable: Record<string, string[]> = {
+    companies: ['id', 'name'],
+    pickups: ['id', 'company_id', 'date', 'yard', 'notes', 'deduction', 'total_amount', 'currency'],
+    metal_items: ['id', 'pickup_id', 'metal_name', 'net_weight', 'price_per_unit', 'total', 'weight_unit'],
+    deductions: ['id', 'company_id', 'date', 'amount', 'notes', 'currency'],
+    yard_options: ['id', 'name'],
+    currency_options: ['id', 'code', 'symbol', 'label'],
+    unit_options: ['id', 'value', 'label'],
+  };
+
+  while ((insertMatch = insertRegex.exec(sqlText)) !== null) {
+    const tableName = normalizeTableName(insertMatch[1]);
+    if (!tableRows[tableName]) continue;
+    const cols = insertMatch[2]
+      ? insertMatch[2].split(',').map((c) => c.replace(/["`]/g, '').trim().toLowerCase())
+      : defaultColsByTable[tableName] || [];
+    const valuesSection = insertMatch[3];
+    const tupleRegex = /\(([^()]*)\)/g;
+    let tupleMatch: RegExpExecArray | null;
+    while ((tupleMatch = tupleRegex.exec(valuesSection)) !== null) {
+      const vals = parseSqlValueTokens(tupleMatch[1]);
+      if (vals.length === 0) continue;
+      const rowObj: Record<string, string | null> = {};
+      cols.forEach((col, idx) => {
+        rowObj[col] = idx < vals.length ? vals[idx] : null;
+      });
+      tableRows[tableName].push(rowObj);
+    }
+  }
+
+  const companies: CompanyRecord[] = tableRows.companies
+    .map((r, idx) => ({
+      id: Number(r.id) || idx + 1,
+      name: String(r.name ?? '').trim(),
+    }))
+    .filter((c) => c.name.length > 0);
+
+  const metalsByPickupId = new Map<number, MetalItemRecord[]>();
+  for (const [idx, r] of tableRows.metal_items.entries()) {
+    const id = Number(r.id) || idx + 1;
+    const pickupId = Number(r.pickup_id) || 0;
+    if (!pickupId) continue;
+    const netWeight = Number(r.net_weight) || 0;
+    const pricePerUnit = Number(r.price_per_unit) || 0;
+    const rawTotal = r.total !== null && r.total !== undefined && r.total !== '' ? Number(r.total) : netWeight * pricePerUnit;
+    const computedTotal = Math.round((Number.isFinite(rawTotal) ? rawTotal : netWeight * pricePerUnit) * 1e6) / 1e6;
+    const metalItem: MetalItemRecord = {
+      id,
+      pickup_id: pickupId,
+      metal_name: String(r.metal_name ?? '').trim(),
+      net_weight: netWeight,
+      weight_unit: String(r.weight_unit || 'kg').trim() || 'kg',
+      price_per_unit: pricePerUnit,
+      total: Math.abs(computedTotal) < 1e-9 ? 0 : computedTotal,
+    };
+    if (!metalsByPickupId.has(pickupId)) {
+      metalsByPickupId.set(pickupId, []);
+    }
+    metalsByPickupId.get(pickupId)!.push(metalItem);
+  }
+
+  for (const list of metalsByPickupId.values()) {
+    list.sort((a, b) => a.id - b.id);
+  }
+
+  const pickups: PickupRecord[] = tableRows.pickups.map((r, idx) => {
+    const id = Number(r.id) || idx + 1;
+    const companyId = Number(r.company_id) || 1;
+    const metals = metalsByPickupId.get(id) || [];
+    const deduction = Math.round((Number(r.deduction) || 0) * 1e6) / 1e6;
+    const sumMetals = metals.reduce((acc, m) => acc + m.total, 0);
+    const rawTotalAmount =
+      r.total_amount !== null && r.total_amount !== undefined && r.total_amount !== ''
+        ? Number(r.total_amount)
+        : sumMetals - deduction;
+    const computedTotalAmount = Math.round((Number.isFinite(rawTotalAmount) ? rawTotalAmount : sumMetals - deduction) * 1e6) / 1e6;
+
+    return {
+      id,
+      company_id: companyId,
+      date: String(r.date || '2025-01-01').slice(0, 10),
+      yard: String(r.yard ?? '').trim(),
+      notes: String(r.notes ?? '').trim(),
+      deduction: Math.abs(deduction) < 1e-9 ? 0 : deduction,
+      total_amount: Math.abs(computedTotalAmount) < 1e-9 ? 0 : computedTotalAmount,
+      currency: String(r.currency || 'AUD$').trim() || 'AUD$',
+      metals,
+    };
+  });
+
+  const deductions: DeductionRecord[] = tableRows.deductions.map((r, idx) => {
+    const amt = Math.round(Math.abs(Number(r.amount) || 0) * 1e6) / 1e6;
+    return {
+      id: Number(r.id) || idx + 1,
+      company_id: Number(r.company_id) || 1,
+      date: String(r.date || '2025-01-01').slice(0, 10),
+      amount: amt < 1e-9 ? 0 : amt,
+      notes: String(r.notes ?? '').trim(),
+      currency: String(r.currency || 'AUD$').trim() || 'AUD$',
+    };
+  });
+
+  const yards: YardOptionRecord[] = tableRows.yard_options
+    .map((r, idx) => ({
+      id: Number(r.id) || idx + 1,
+      name: String(r.name ?? '').trim(),
+    }))
+    .filter((y) => y.name.length > 0);
+
+  if (yards.length === 0) {
+    const discoveredYards = new Set<string>();
+    for (const p of pickups) {
+      const firstLine = (p.yard || '').split(/\r?\n/)[0].trim();
+      if (firstLine && firstLine.length <= 50) {
+        discoveredYards.add(firstLine);
+      }
+    }
+    if (discoveredYards.size === 0) {
+      discoveredYards.add('Wetherill Park');
+      discoveredYards.add('Minchinbury');
+    }
+    let yId = 1;
+    for (const name of discoveredYards) {
+      yards.push({ id: yId++, name });
+    }
+  }
+
+  const currencies: CurrencyOptionRecord[] = tableRows.currency_options
+    .map((r, idx) => {
+      const code = String(r.code ?? '').trim().toUpperCase();
+      const symbol = String(r.symbol ?? '$').trim();
+      const label = String(r.label || `${code}${symbol}`).trim();
+      return {
+        id: Number(r.id) || idx + 1,
+        code,
+        symbol,
+        label,
+      };
+    })
+    .filter((c) => c.code.length > 0);
+
+  if (currencies.length === 0) {
+    currencies.push({ id: 1, code: 'AUD', symbol: '$', label: 'AUD$' });
+  }
+
+  const units: UnitOptionRecord[] = tableRows.unit_options
+    .map((r, idx) => {
+      const val = String(r.value ?? '').trim();
+      const label = String(r.label || val).trim();
+      return {
+        id: Number(r.id) || idx + 1,
+        value: val,
+        label,
+      };
+    })
+    .filter((u) => u.value.length > 0);
+
+  if (units.length === 0) {
+    units.push(
+      { id: 1, value: 'kg', label: 'Kilograms' },
+      { id: 2, value: 't', label: 'Tonnes' }
+    );
+  }
+
+  return {
+    companies,
+    pickups,
+    deductions,
+    yards,
+    currencies,
+    units,
+  };
+}
+
 export function buildMultiTabXlsxBase64(
   tabs: Record<string, Array<Array<string | number>>>
 ): string {
@@ -1524,58 +1820,14 @@ export class LedgerDatabase {
         this.setMetaEncrypted('nextPickupSeq', '1');
         this.setMetaEncrypted('nextMetalSeq', '1');
         this.setMetaEncrypted('nextDeductionSeq', '1');
-        this.setMetaEncrypted('nextYardOptionSeq', '3');
-        this.setMetaEncrypted('nextCurrencyOptionSeq', '2');
-        this.setMetaEncrypted('nextUnitOptionSeq', '3');
+        this.setMetaEncrypted('nextYardOptionSeq', '1');
+        this.setMetaEncrypted('nextCurrencyOptionSeq', '1');
+        this.setMetaEncrypted('nextUnitOptionSeq', '1');
 
         DEFAULT_SEED_CUSTOMERS.forEach((cust, idx) => {
           this.insertCustomerInternal(cust, idx + 1);
         });
-
-        // Seed Money-Total-Sheet default options
-        const defaultYards: YardOptionRecord[] = [
-          { id: 1, name: 'Wetherill Park' },
-          { id: 2, name: 'Minchinbury' },
-        ];
-        for (const y of defaultYards) {
-          this.db
-            .prepare('INSERT OR REPLACE INTO yards_enc (id, ciphertext) VALUES (?, ?)')
-            .run(y.id, encryptPayload(JSON.stringify(y), this.key));
-        }
-
-        const defaultCurr: CurrencyOptionRecord = {
-          id: 1,
-          code: 'AUD',
-          symbol: '$',
-          label: 'AUD$',
-        };
-        this.db
-          .prepare('INSERT OR REPLACE INTO currencies_enc (id, ciphertext) VALUES (?, ?)')
-          .run(defaultCurr.id, encryptPayload(JSON.stringify(defaultCurr), this.key));
-
-        const defaultUnits: UnitOptionRecord[] = [
-          { id: 1, value: 'kg', label: 'Kilograms' },
-          { id: 2, value: 't', label: 'Tonnes' },
-        ];
-        for (const u of defaultUnits) {
-          this.db
-            .prepare('INSERT OR REPLACE INTO units_enc (id, ciphertext) VALUES (?, ?)')
-            .run(u.id, encryptPayload(JSON.stringify(u), this.key));
-        }
       });
-
-      // Auto-seed Money-Total-Sheet historical dataset when initializing main accounts_dues.sqlite
-      try {
-        const seedPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'initial_mts_seed.json');
-        if (!process.env.ADM_SKIP_MTS_SEED && fs.existsSync(seedPath)) {
-          const seedData = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
-          if (seedData && Array.isArray(seedData.companies) && seedData.companies.length > 0) {
-            this.importMoneyTotalSheetDataset(seedData);
-          }
-        }
-      } catch {
-        // Safe fallback if seed file cannot be parsed
-      }
     } else {
       const decrypted = decryptPayload(canaryRow.value, this.key);
       if (decrypted !== CANARY_PLAINTEXT) {
@@ -2659,7 +2911,7 @@ export class LedgerDatabase {
           net_weight: netWeight,
           weight_unit: String(m.weight_unit || 'kg').trim(),
           price_per_unit: pricePerUnit,
-          total: Math.round(total * 100) / 100,
+          total: Math.round(total * 1e6) / 1e6,
         };
         return record;
       });
@@ -2667,7 +2919,7 @@ export class LedgerDatabase {
 
       const deduction = Number(input.deduction) || 0;
       const sumMetals = metals.reduce((acc, m) => acc + m.total, 0);
-      const totalAmount = Math.round((sumMetals - deduction) * 100) / 100;
+      const totalAmount = Math.round((sumMetals - deduction) * 1e6) / 1e6;
 
       const pickup: PickupRecord = {
         id: pickupSeq,
@@ -2730,14 +2982,14 @@ export class LedgerDatabase {
           net_weight: netWeight,
           weight_unit: String(m.weight_unit || 'kg').trim(),
           price_per_unit: pricePerUnit,
-          total: Math.round(total * 100) / 100,
+          total: Math.round(total * 1e6) / 1e6,
         };
       });
       this.setMetaEncrypted('nextMetalSeq', String(metalSeq));
 
       const deduction = input.deduction !== undefined ? Number(input.deduction) || 0 : existing.deduction;
       const sumMetals = metals.reduce((acc, m) => acc + m.total, 0);
-      const totalAmount = Math.round((sumMetals - deduction) * 100) / 100;
+      const totalAmount = Math.round((sumMetals - deduction) * 1e6) / 1e6;
 
       const updated: PickupRecord = {
         id: pickupId,
@@ -2879,7 +3131,7 @@ export class LedgerDatabase {
       if (existing.some((y) => y.name.toLowerCase() === cleanName.toLowerCase())) {
         throw new Error('Yard already exists');
       }
-      const seq = parseInt(this.getMetaDecrypted('nextYardOptionSeq', '3'), 10);
+      const seq = parseInt(this.getMetaDecrypted('nextYardOptionSeq', '1'), 10);
       this.setMetaEncrypted('nextYardOptionSeq', String(seq + 1));
       const yard: YardOptionRecord = { id: seq, name: cleanName };
       this.db
@@ -2916,6 +3168,11 @@ export class LedgerDatabase {
           const p = JSON.parse(decryptPayload(r.ciphertext, this.key)) as PickupRecord;
           if (p.yard === oldName) {
             p.yard = cleanName;
+            this.db
+              .prepare('UPDATE pickups_enc SET ciphertext = ? WHERE id = ?')
+              .run(encryptPayload(JSON.stringify(p), this.key), p.id);
+          } else if (p.yard && p.yard.startsWith(`${oldName}\n`)) {
+            p.yard = `${cleanName}${p.yard.slice(oldName.length)}`;
             this.db
               .prepare('UPDATE pickups_enc SET ciphertext = ? WHERE id = ?')
               .run(encryptPayload(JSON.stringify(p), this.key), p.id);
@@ -2957,7 +3214,7 @@ export class LedgerDatabase {
       if (existing.some((c) => c.code.toUpperCase() === code || c.label === label)) {
         throw new Error('Currency already exists');
       }
-      const seq = parseInt(this.getMetaDecrypted('nextCurrencyOptionSeq', '2'), 10);
+      const seq = parseInt(this.getMetaDecrypted('nextCurrencyOptionSeq', '1'), 10);
       this.setMetaEncrypted('nextCurrencyOptionSeq', String(seq + 1));
       const curr: CurrencyOptionRecord = { id: seq, code, symbol, label };
       this.db
@@ -3047,7 +3304,7 @@ export class LedgerDatabase {
       if (existing.some((u) => u.value.toLowerCase() === value.toLowerCase())) {
         throw new Error('Unit already exists');
       }
-      const seq = parseInt(this.getMetaDecrypted('nextUnitOptionSeq', '3'), 10);
+      const seq = parseInt(this.getMetaDecrypted('nextUnitOptionSeq', '1'), 10);
       this.setMetaEncrypted('nextUnitOptionSeq', String(seq + 1));
       const unit: UnitOptionRecord = { id: seq, value, label };
       this.db
@@ -3260,6 +3517,96 @@ export class LedgerDatabase {
     return JSON.stringify(archivePayload, null, 2);
   }
 
+  public exportSqlDump(): string {
+    const dataset = this.exportMoneyTotalSheetDataset();
+    const esc = (val: string | number | null | undefined): string => {
+      if (val === null || val === undefined) return '\\N';
+      return String(val)
+        .replace(/\\/g, '\\\\')
+        .replace(/\t/g, '\\t')
+        .replace(/\r/g, '\\r')
+        .replace(/\n/g, '\\n');
+    };
+
+    const lines: string[] = [
+      '--',
+      '-- Money Total Sheet SQL Database Dump',
+      `-- Exported at: ${new Date().toISOString()}`,
+      '--',
+      '',
+    ];
+
+    // 1. companies
+    lines.push('COPY public.companies (id, name) FROM stdin;');
+    for (const c of dataset.companies) {
+      lines.push(`${c.id}\t${esc(c.name)}`);
+    }
+    lines.push('\\.', '');
+
+    // 2. currency_options
+    lines.push('COPY public.currency_options (id, code, symbol, label) FROM stdin;');
+    for (const c of dataset.currencies) {
+      lines.push(`${c.id}\t${esc(c.code)}\t${esc(c.symbol)}\t${esc(c.label)}`);
+    }
+    lines.push('\\.', '');
+
+    // 3. unit_options
+    lines.push('COPY public.unit_options (id, value, label) FROM stdin;');
+    for (const u of dataset.units) {
+      lines.push(`${u.id}\t${esc(u.value)}\t${esc(u.label)}`);
+    }
+    lines.push('\\.', '');
+
+    // 4. yard_options
+    lines.push('COPY public.yard_options (id, name) FROM stdin;');
+    for (const y of dataset.yards) {
+      lines.push(`${y.id}\t${esc(y.name)}`);
+    }
+    lines.push('\\.', '');
+
+    // 5. pickups & metal_items
+    lines.push(
+      'COPY public.pickups (id, company_id, date, yard, notes, deduction, total_amount, currency) FROM stdin;'
+    );
+    const allMetals: MetalItemRecord[] = [];
+    for (const p of dataset.pickups) {
+      lines.push(
+        `${p.id}\t${p.company_id}\t${esc(p.date)}\t${esc(p.yard)}\t${esc(p.notes || '')}\t${p.deduction ?? 0}\t${p.total_amount ?? 0}\t${esc(p.currency || 'AUD$')}`
+      );
+      if (Array.isArray(p.metals)) {
+        for (const m of p.metals) {
+          allMetals.push({
+            ...m,
+            pickup_id: p.id,
+          });
+        }
+      }
+    }
+    lines.push('\\.', '');
+
+    lines.push(
+      'COPY public.metal_items (id, pickup_id, metal_name, net_weight, price_per_unit, total, weight_unit) FROM stdin;'
+    );
+    for (const [idx, m] of allMetals.entries()) {
+      const mId = m.id || idx + 1;
+      lines.push(
+        `${mId}\t${m.pickup_id}\t${esc(m.metal_name)}\t${m.net_weight ?? 0}\t${m.price_per_unit ?? 0}\t${m.total ?? 0}\t${esc(m.weight_unit || 'kg')}`
+      );
+    }
+    lines.push('\\.', '');
+
+    // 6. deductions
+    lines.push('COPY public.deductions (id, company_id, date, amount, notes, currency) FROM stdin;');
+    for (const d of dataset.deductions) {
+      lines.push(
+        `${d.id}\t${d.company_id}\t${esc(d.date)}\t${d.amount ?? 0}\t${esc(d.notes || '')}\t${esc(d.currency || 'AUD$')}`
+      );
+    }
+    lines.push('\\.', '');
+
+    return lines.join('\n');
+  }
+
   public clearDatabase(): AppState {
     return this.runInTransaction(() => {
       this.db.exec('DELETE FROM ledger_entries_enc;');
@@ -3267,11 +3614,17 @@ export class LedgerDatabase {
       this.db.exec('DELETE FROM companies_enc;');
       this.db.exec('DELETE FROM pickups_enc;');
       this.db.exec('DELETE FROM deductions_enc;');
+      this.db.exec('DELETE FROM yards_enc;');
+      this.db.exec('DELETE FROM currencies_enc;');
+      this.db.exec('DELETE FROM units_enc;');
       this.setMetaEncrypted('nextCustomerSeq', '1001');
       this.setMetaEncrypted('nextCompanySeq', '1');
       this.setMetaEncrypted('nextPickupSeq', '1');
       this.setMetaEncrypted('nextMetalSeq', '1');
       this.setMetaEncrypted('nextDeductionSeq', '1');
+      this.setMetaEncrypted('nextYardOptionSeq', '1');
+      this.setMetaEncrypted('nextCurrencyOptionSeq', '1');
+      this.setMetaEncrypted('nextUnitOptionSeq', '1');
       return this.getAppState();
     });
   }
@@ -3454,6 +3807,21 @@ export class LedgerDatabase {
         } else if (Array.isArray(parsed.customers) || parsed.mtsDataset) {
           stateToRestore = parsed;
         }
+      } else if (isSqlDumpContent(trimmed, fileName)) {
+        const sqlDataset = parseSqlDumpDataset(trimmed);
+        if (
+          sqlDataset.companies.length > 0 ||
+          sqlDataset.pickups.length > 0 ||
+          sqlDataset.deductions.length > 0
+        ) {
+          const existing = this.getAppState();
+          stateToRestore = {
+            ...existing,
+            mtsDataset: sqlDataset,
+          };
+        } else {
+          throw new Error('No valid companies, pickups, or deductions found in SQL file.');
+        }
       } else {
         const tableRows = parseCsvRows(trimmed);
         if (tableRows.length > 0) {
@@ -3526,6 +3894,35 @@ export class LedgerDatabase {
 
       return this.getAppState();
     });
+  }
+
+  public importSqlDump(sqlText: string): {
+    companies: number;
+    pickups: number;
+    metals: number;
+    deductions: number;
+    yards: number;
+    currencies: number;
+    units: number;
+  } {
+    const dataset = parseSqlDumpDataset(sqlText);
+    if (
+      dataset.companies.length === 0 &&
+      dataset.pickups.length === 0 &&
+      dataset.deductions.length === 0
+    ) {
+      throw new Error('No valid companies, pickups, or deductions found in SQL file.');
+    }
+    this.importMoneyTotalSheetDataset(dataset);
+    return {
+      companies: dataset.companies.length,
+      pickups: dataset.pickups.length,
+      metals: dataset.pickups.reduce((acc, p) => acc + (p.metals ? p.metals.length : 0), 0),
+      deductions: dataset.deductions.length,
+      yards: dataset.yards.length,
+      currencies: dataset.currencies.length,
+      units: dataset.units.length,
+    };
   }
 
   public close(): void {

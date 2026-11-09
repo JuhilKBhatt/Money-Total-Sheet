@@ -18,3 +18,4 @@ build/
 .env.*
 backups/*/*.sql
 backend/*.xlsx
+.DS_Store

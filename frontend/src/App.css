@@ -18,6 +18,107 @@
   white-space: nowrap;
 }
 
+/* Database Sync LED Pill in Header */
+.db-sync-led-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  user-select: none;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(15, 23, 42, 0.75);
+}
+
+.db-sync-led-prefix {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.db-sync-led-dot-wrap {
+  position: relative;
+  display: inline-flex;
+  width: 9px;
+  height: 9px;
+  align-items: center;
+  justify-content: center;
+}
+
+.db-sync-led-dot {
+  position: relative;
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.db-sync-led-ping {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  opacity: 0.75;
+  animation: dbLedPing 0.9s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Idle (Safe) State - Green */
+.db-led-idle {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+.db-led-idle .db-sync-led-dot {
+  background-color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.75);
+}
+.db-led-idle .db-sync-led-text {
+  color: #34d399;
+}
+
+/* Reading State - Amber */
+.db-led-reading {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(69, 26, 3, 0.55);
+}
+.db-led-reading .db-sync-led-dot {
+  background-color: #f59e0b;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.95);
+}
+.db-led-reading .db-sync-led-ping {
+  background-color: #fbbf24;
+}
+.db-led-reading .db-sync-led-text {
+  color: #fcd34d;
+}
+
+/* Writing State - Rose / Red */
+.db-led-writing {
+  border-color: rgba(244, 63, 94, 0.65);
+  background: rgba(76, 5, 25, 0.65);
+}
+.db-led-writing .db-sync-led-dot {
+  background-color: #f43f5e;
+  box-shadow: 0 0 12px rgba(244, 63, 94, 1);
+}
+.db-led-writing .db-sync-led-ping {
+  background-color: #fb7185;
+}
+.db-led-writing .db-sync-led-text {
+  color: #fda4af;
+}
+
+@keyframes dbLedPing {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+  75%, 100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
 .app-content {
   padding: 24px 50px;
 }

@@ -38,11 +38,11 @@ else
 fi
 
 export NODE_OPTIONS="--no-warnings"
-export PORT="3002"
+export PORT="3003"
 export ADM_ROOT_DIR="$APP_ROOT"
 
 # Automatically open the default browser to the app
-(sleep 1 && open "http://localhost:3002" 2>/dev/null || true) &
+(sleep 1 && open "http://localhost:3003" 2>/dev/null || true) &
 
 if [ -d "$APP_ROOT/frontend/node_modules/next" ]; then
   echo "[Mode] Launching Next.js Frontend + Encrypted SQLite Service..."

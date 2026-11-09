@@ -31,11 +31,11 @@ if exist "%APP_ROOT%bin\windows\node.exe" (
   set "NODE_EXE=node"
 )
 
-set "PORT=3002"
+set "PORT=3003"
 set "ADM_ROOT_DIR=%APP_ROOT%"
 
 REM Open default browser to the application
-start "" "http://localhost:3002"
+start "" "http://localhost:3003"
 
 if exist "%APP_ROOT%frontend\node_modules\next" (
   echo [Mode] Launching Next.js Frontend + Encrypted SQLite Service...

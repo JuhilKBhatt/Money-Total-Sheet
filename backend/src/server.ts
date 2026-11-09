@@ -46,29 +46,61 @@ const BRIDGE_SCRIPT = `
   }
 
   // Intercept window.fetch so any direct POST /api/ledger mutation broadcasts to all tabs
+  // and notifies the Database Sync LED of read/write activity
   if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
     const origFetch = window.fetch;
     window.fetch = async function(...args) {
-      const res = await origFetch.apply(this, args);
-      try {
-        const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url ? args[0].url : '');
-        const options = args[1];
-        if (url.includes('/api/ledger') && options && options.method === 'POST' && res && res.ok) {
-          let action = '';
-          let customerId;
+      const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url ? args[0].url : '');
+      const options = args[1] || {};
+      const method = String(options.method || 'GET').toUpperCase();
+      const isHeartbeatOrSse = url.includes('/api/heartbeat') || url.includes('/api/sync-events');
+      const isDbCall = !isHeartbeatOrSse && (
+        url.includes('/api/ledger') ||
+        url.includes('/database') ||
+        url.includes('/companies') ||
+        url.includes('/pickups') ||
+        url.includes('/deductions') ||
+        url.includes('/yards') ||
+        url.includes('/currencies') ||
+        url.includes('/units') ||
+        url.includes('/metals')
+      );
+      if (isDbCall) {
+        let mode = method === 'GET' ? 'read' : 'write';
+        if (url.includes('/api/ledger') && method === 'POST' && options.body) {
           try {
-            if (options.body) {
-              const parsed = JSON.parse(String(options.body));
-              action = parsed.action;
-              customerId = parsed.payload?.customerId;
+            const parsed = JSON.parse(String(options.body));
+            if (parsed.action === 'getState' || parsed.action === 'checkLockout') {
+              mode = 'read';
             }
           } catch (e) {}
-          if (action !== 'getState' && action !== 'verifyPasscode' && action !== 'checkLockout') {
-            broadcastDbChange({ action, customerId: customerId || (typeof appData !== 'undefined' ? appData.activeCustomerId : undefined) });
-          }
         }
-      } catch (e) {}
-      return res;
+        window.dispatchEvent(new CustomEvent('adm-db-activity', { detail: { phase: 'start', mode } }));
+      }
+      try {
+        const res = await origFetch.apply(this, args);
+        try {
+          if (url.includes('/api/ledger') && options && options.method === 'POST' && res && res.ok) {
+            let action = '';
+            let customerId;
+            try {
+              if (options.body) {
+                const parsed = JSON.parse(String(options.body));
+                action = parsed.action;
+                customerId = parsed.payload?.customerId;
+              }
+            } catch (e) {}
+            if (action !== 'getState' && action !== 'verifyPasscode' && action !== 'checkLockout') {
+              broadcastDbChange({ action, customerId: customerId || (typeof appData !== 'undefined' ? appData.activeCustomerId : undefined) });
+            }
+          }
+        } catch (e) {}
+        return res;
+      } finally {
+        if (isDbCall) {
+          window.dispatchEvent(new CustomEvent('adm-db-activity', { detail: { phase: 'end' } }));
+        }
+      }
     };
   }
 
@@ -723,16 +755,18 @@ const BRIDGE_SCRIPT = `
         };
         input.click();
       } else if (action === 'download-db') {
-        const res = await postSqliteAction('exportBackup', {});
-        if (res.ok && res.data) {
+        const res = await fetch('/database/export-sql');
+        const json = await res.json();
+        if (res.ok && json.ok && typeof json.sql === 'string') {
+          const dateStr = new Date().toISOString().slice(0, 10);
           const element = document.createElement('a');
-          element.setAttribute('href', 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(res.data));
-          element.setAttribute('download', 'money_total_sheet_encrypted_' + Date.now() + '.bak');
+          element.setAttribute('href', 'data:application/sql;charset=utf-8,' + encodeURIComponent(json.sql));
+          element.setAttribute('download', 'money_total_sheet_backup_' + dateStr + '.sql');
           element.style.display = 'none';
           document.body.appendChild(element);
           element.click();
           document.body.removeChild(element);
-          showToast('Encrypted database archive (.bak) downloaded.');
+          showToast('Database backup (.sql) downloaded.');
         }
       } else if (action === 'delete-db') {
         const box = document.getElementById('inline-delete-db-box');
@@ -1193,7 +1227,8 @@ export function handleHttpRequest(
     req.pathname.startsWith('/yards') ||
     req.pathname.startsWith('/currencies') ||
     req.pathname.startsWith('/units') ||
-    req.pathname.startsWith('/metals');
+    req.pathname.startsWith('/metals') ||
+    req.pathname.startsWith('/database');
 
   if (isMtsApiRoute) {
     if (locked) {
@@ -1209,6 +1244,73 @@ export function handleHttpRequest(
 
     try {
       const activeDb = db && db.isHealthy() ? db : getLedgerDatabase(dirToUse);
+
+      // --- Export SQL Dump ---
+      if (req.pathname === '/database/export-sql' && req.method === 'GET') {
+        const sql = activeDb.exportSqlDump();
+        return {
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          headers: responseHeaders,
+          body: JSON.stringify({
+            ok: true,
+            sql,
+          }),
+        };
+      }
+
+      // --- Restore SQL Dump ---
+      if (req.pathname === '/database/restore-sql' && req.method === 'POST') {
+        let sqlText = '';
+        const rawBody = req.body || '';
+        if (rawBody.trim().startsWith('{')) {
+          const parsedBody = JSON.parse(rawBody) as { sql?: string; content?: string };
+          sqlText = String(parsedBody.sql ?? parsedBody.content ?? '');
+        } else {
+          sqlText = rawBody;
+        }
+        const stats = activeDb.importSqlDump(sqlText);
+        return {
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          headers: responseHeaders,
+          body: JSON.stringify({
+            ok: true,
+            message: 'SQL database dump restored into encrypted database.',
+            stats,
+          }),
+        };
+      }
+
+      // --- Reset Database ---
+      if (req.pathname === '/database/reset' && req.method === 'POST') {
+        const parsedBody = req.body ? (JSON.parse(req.body) as { confirmation?: string }) : {};
+        const confirmation = String(parsedBody.confirmation ?? '')
+          .trim()
+          .toLowerCase();
+        if (confirmation !== 'delete' && confirmation !== 'reset') {
+          return {
+            status: 400,
+            contentType: 'application/json; charset=utf-8',
+            headers: responseHeaders,
+            body: JSON.stringify({
+              ok: false,
+              detail: 'Please type "delete" to confirm resetting the database.',
+            }),
+          };
+        }
+        activeDb.clearDatabase();
+        return {
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          headers: responseHeaders,
+          body: JSON.stringify({
+            ok: true,
+            message: 'Encrypted database has been reset to an empty state.',
+          }),
+        };
+      }
+
       const bodyObj = req.body ? JSON.parse(req.body) : {};
 
       // --- Companies ---
@@ -1233,19 +1335,47 @@ export function handleHttpRequest(
       }
 
       const companySubMatch = req.pathname.match(/^\/companies\/(\d+)\/(pickups|deductions)\/?$/);
-      if (companySubMatch && req.method === 'GET') {
+      if (companySubMatch) {
         const companyId = Number(companySubMatch[1]);
         const subResource = companySubMatch[2];
-        const data =
-          subResource === 'pickups'
-            ? activeDb.getPickupsByCompany(companyId)
-            : activeDb.getDeductionsByCompany(companyId);
-        return {
-          status: 200,
-          contentType: 'application/json; charset=utf-8',
-          headers: responseHeaders,
-          body: JSON.stringify(data),
-        };
+        if (req.method === 'GET') {
+          const data =
+            subResource === 'pickups'
+              ? activeDb.getPickupsByCompany(companyId)
+              : activeDb.getDeductionsByCompany(companyId);
+          return {
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            headers: responseHeaders,
+            body: JSON.stringify(data),
+          };
+        }
+        if (req.method === 'POST') {
+          const created =
+            subResource === 'pickups'
+              ? activeDb.createPickup({
+                  company_id: companyId,
+                  date: String(bodyObj.date ?? ''),
+                  yard: String(bodyObj.yard ?? ''),
+                  currency: String(bodyObj.currency ?? '$'),
+                  notes: String(bodyObj.notes ?? ''),
+                  deduction: Number(bodyObj.deduction) || 0,
+                  metals: Array.isArray(bodyObj.metals) ? bodyObj.metals : [],
+                })
+              : activeDb.createDeduction({
+                  company_id: companyId,
+                  date: String(bodyObj.date ?? ''),
+                  amount: Number(bodyObj.amount) || 0,
+                  currency: String(bodyObj.currency ?? '$'),
+                  notes: String(bodyObj.notes ?? ''),
+                });
+          return {
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            headers: responseHeaders,
+            body: JSON.stringify(created),
+          };
+        }
       }
 
       const companyIdMatch = req.pathname.match(/^\/companies\/(\d+)\/?$/);
@@ -1658,7 +1788,7 @@ const isMain =
   process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
 
 if (isMain) {
-  const port = Number(process.env.PORT || 3002);
+  const port = Number(process.env.PORT || 3003);
   const host = process.env.HOST || '127.0.0.1';
   const rootDir = process.env.ADM_ROOT_DIR || resolvePortablePaths().root;
   const locked = isDatabaseLocked(rootDir);

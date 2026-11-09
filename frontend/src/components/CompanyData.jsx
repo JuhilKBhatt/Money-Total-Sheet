@@ -256,6 +256,11 @@ export default function CompanyData({ companyId, companyName }) {
   };
 
   // --- Logic ---
+  const cleanMoney = (val) => {
+    const v = Number(val) || 0;
+    return Math.abs(v) < 1e-6 ? 0 : Math.round(v * 1e6) / 1e6;
+  };
+
   const buildLedgerData = () => {
     let events = [];
     pickups.forEach(p => events.push({ ...p, eventType: 'pickup' }));
@@ -267,7 +272,7 @@ export default function CompanyData({ companyId, companyName }) {
       if (dateA > dateB) return 1;
       if (a.eventType === 'pickup' && b.eventType === 'deduction') return -1;
       if (a.eventType === 'deduction' && b.eventType === 'pickup') return 1;
-      return 0;
+      return (a.id || 0) - (b.id || 0);
     });
 
     const data = [];
@@ -286,8 +291,8 @@ export default function CompanyData({ companyId, companyName }) {
 
         if (event.metals && event.metals.length > 0) {
           event.metals.forEach((metal, mIndex) => {
-            const metalTotal = metal.net_weight * metal.price_per_unit;
-            runningBalances[eventCurr] += metalTotal;
+            const metalTotal = cleanMoney((Number(metal.net_weight) || 0) * (Number(metal.price_per_unit) || 0));
+            runningBalances[eventCurr] = cleanMoney(runningBalances[eventCurr] + metalTotal);
             data.push({
               key: `metal-${metal.id}`,
               type: 'metal',
@@ -313,13 +318,14 @@ export default function CompanyData({ companyId, companyName }) {
               type: 'balance', 
               isoDate: event.date,
               priceLabel: `BAL (${curr}) till date >`, 
-              total: runningBalances[curr], 
+              total: cleanMoney(runningBalances[curr]), 
               currency: curr 
             });
           });
         }
       } else if (event.eventType === 'deduction') {
-        runningBalances[eventCurr] -= event.amount;
+        const dedAmt = cleanMoney(event.amount);
+        runningBalances[eventCurr] = cleanMoney(runningBalances[eventCurr] - dedAmt);
         data.push({
           key: `deduction-${event.id}`,
           type: 'deduction',
@@ -328,7 +334,7 @@ export default function CompanyData({ companyId, companyName }) {
           date: dayjs(event.date).format('DD/MM/YYYY'), 
           yardNotes: event.notes || 'Deduction', 
           metal: '', kg: '', price: '',
-          total: event.amount,
+          total: dedAmt,
           currency: eventCurr,
           rowSpan: 1
         });
@@ -340,7 +346,7 @@ export default function CompanyData({ companyId, companyName }) {
               type: 'balance', 
               isoDate: event.date,
               priceLabel: `BAL (${curr}) till date >`, 
-              total: runningBalances[curr], 
+              total: cleanMoney(runningBalances[curr]), 
               currency: curr 
             });
           });
@@ -369,12 +375,16 @@ export default function CompanyData({ companyId, companyName }) {
   pickups.forEach(pickup => {
     const c = pickup.currency || defaultCurrency;
     if (!grandTotals[c]) grandTotals[c] = 0;
-    grandTotals[c] += (pickup.metals || []).reduce((mSum, metal) => mSum + (metal.total || 0), 0);
+    const pickupSum = (pickup.metals || []).reduce(
+      (mSum, metal) => cleanMoney(mSum + cleanMoney((Number(metal.net_weight) || 0) * (Number(metal.price_per_unit) || 0))),
+      0
+    );
+    grandTotals[c] = cleanMoney(grandTotals[c] + pickupSum);
   });
   deductions.forEach(deduction => {
     const c = deduction.currency || defaultCurrency;
     if (!grandTotals[c]) grandTotals[c] = 0;
-    grandTotals[c] -= (deduction.amount || 0);
+    grandTotals[c] = cleanMoney(grandTotals[c] - cleanMoney(deduction.amount));
   });
 
   return (

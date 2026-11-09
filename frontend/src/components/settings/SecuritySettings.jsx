@@ -42,14 +42,6 @@ export default function SecuritySettings() {
   const handleOpenPasswordModal = () => {
     if (typeof window.openResetPasswordModal === 'function') {
       window.openResetPasswordModal();
-    } else if (typeof window.openSettingsDrawer === 'function') {
-      window.openSettingsDrawer();
-    }
-  };
-
-  const handleOpenRecoverySettings = () => {
-    if (typeof window.openSettingsDrawer === 'function') {
-      window.openSettingsDrawer();
     }
   };
 
@@ -65,14 +57,6 @@ export default function SecuritySettings() {
   return (
     <div>
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-        <Alert
-          type="success"
-          showIcon
-          icon={<SafetyCertificateOutlined />}
-          message="AES-256-GCM & Scrypt Envelope Encryption Active"
-          description="All company records, metal pickups, deductions, and ledger entries are encrypted on disk inside data/accounts_dues.sqlite using a 32-byte master key wrapped with your supervisor password (scrypt N=16384, r=8, p=1)."
-        />
-
         <Card size="small" title="Supervisor Password & Session Control">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div>
@@ -102,9 +86,6 @@ export default function SecuritySettings() {
             <Space wrap>
               <Button type="primary" icon={<KeyOutlined />} onClick={handleOpenPasswordModal}>
                 Change / Reset Password
-              </Button>
-              <Button onClick={handleOpenRecoverySettings}>
-                View / Regenerate Recovery Codes
               </Button>
               <Button danger icon={<LockOutlined />} onClick={handleLockDatabase}>
                 Lock System Now

@@ -12,7 +12,12 @@ export default function UnitSettings() {
   const [editingItem, setEditingItem] = useState(null);
   const [form] = Form.useForm();
 
-  useEffect(() => { fetchUnits(); }, []);
+  useEffect(() => {
+    fetchUnits();
+    const handleAuthChange = () => fetchUnits();
+    window.addEventListener('adm-auth-changed', handleAuthChange);
+    return () => window.removeEventListener('adm-auth-changed', handleAuthChange);
+  }, []);
 
   const fetchUnits = async () => {
     try {

@@ -12,7 +12,12 @@ export default function YardSettings() {
   const [editingItem, setEditingItem] = useState(null);
   const [form] = Form.useForm();
 
-  useEffect(() => { fetchYards(); }, []);
+  useEffect(() => {
+    fetchYards();
+    const handleAuthChange = () => fetchYards();
+    window.addEventListener('adm-auth-changed', handleAuthChange);
+    return () => window.removeEventListener('adm-auth-changed', handleAuthChange);
+  }, []);
 
   const fetchYards = async () => {
     try {

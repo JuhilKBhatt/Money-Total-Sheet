@@ -12,7 +12,12 @@ export default function CurrencySettings() {
   const [editingItem, setEditingItem] = useState(null);
   const [form] = Form.useForm();
 
-  useEffect(() => { fetchCurrencies(); }, []);
+  useEffect(() => {
+    fetchCurrencies();
+    const handleAuthChange = () => fetchCurrencies();
+    window.addEventListener('adm-auth-changed', handleAuthChange);
+    return () => window.removeEventListener('adm-auth-changed', handleAuthChange);
+  }, []);
 
   const fetchCurrencies = async () => {
     try {

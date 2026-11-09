@@ -63,7 +63,7 @@ export function isUsbConnected(rootDir?: string): boolean {
 /**
  * Executes host OS commands to close browser windows or tabs viewing the application.
  */
-export function closeHostBrowserWindows(port = 3002): void {
+export function closeHostBrowserWindows(port = 3003): void {
   try {
     if (process.platform === 'darwin') {
       const script = `
@@ -141,7 +141,7 @@ export function handleUsbRemoval(options: UsbRemovalOptions = {}): void {
 
   // Close browser tabs/windows
   if (options.closeBrowser !== false) {
-    closeHostBrowserWindows(options.port || 3002);
+    closeHostBrowserWindows(options.port || 3003);
   }
 
   // Close HTTP server if provided

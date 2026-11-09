@@ -122,7 +122,7 @@ describe('USB Heartbeat & Emergency Disconnect Detection', () => {
 
   it('Given closeHostBrowserWindows function When called Then it executes without throwing errors', () => {
     assert.doesNotThrow(() => {
-      closeHostBrowserWindows(3002);
+      closeHostBrowserWindows(3003);
     });
   });
 });
